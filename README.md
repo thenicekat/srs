@@ -18,16 +18,22 @@ A secure command-line tool for storing and managing personal access tokens using
 - Rust 1.70+ installed on your system
 - [Install Rust](https://rustup.rs/) if you haven't already
 
-### Build from Source
+### Installing the Binary
 
 ```bash
-git clone <your-repo-url>
-cd srs
-cargo build --release
+cargo install --git https://github.com/thenicekat/srs
 ```
+### Setting the Platform specific alias
+Add the appropriate alias to your shell's RC file to ensure automatic environment file sourcing:
 
-The binary will be available at `target/release/srs`.
-
+Bash(.bashrc):
+```bash
+echo 'srs() {
+    srs "$@"
+    source ~/.local/share/__srs__.env 2>/dev/null || true
+    rm -f ~/.local/share/__srs__.env
+}' >> ~/.bashrc
+```
 ## 📖 Usage
 
 ### Basic Commands
