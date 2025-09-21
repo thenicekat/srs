@@ -3,8 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-
+use std::env;
 use crate::crypto::CryptoManager;
+
+const FILE_PATH: &str = "srs_token_store.json";
 
 #[derive(Serialize, Deserialize)]
 struct TokenDatabase {
@@ -13,18 +15,19 @@ struct TokenDatabase {
 
 pub struct TokenStorage {
     file_path: String,
-    crypto_manager: CryptoManager,
     database: TokenDatabase,
+    crypto_manager: CryptoManager,
 }
 
 impl TokenStorage {
-    pub fn new(file_path: &str, crypto_manager: CryptoManager) -> Result<Self> {
+    pub fn new() -> Result<Self> {
+        let crypto_manager: CryptoManager = CryptoManager::new()?;
         let mut storage = Self {
-            file_path: file_path.to_string(),
-            crypto_manager,
+            file_path: FILE_PATH.to_string(),
             database: TokenDatabase {
                 tokens: HashMap::new(),
             },
+            crypto_manager,
         };
         
         storage.load()?;
@@ -63,14 +66,39 @@ impl TokenStorage {
     }
     
     pub fn list_tokens(&self) -> Result<Vec<String>> {
+        let _ = self.verify_master_key()?;
         Ok(self.database.tokens.keys().cloned().collect())
     }
+
+    fn verify_master_key(&self) -> Result<bool> {
+        if self.database.tokens.is_empty() {
+            return Err(anyhow::anyhow!("No tokens found, please add a token to start."));
+        }
+        
+        if let Some((_, encrypted_token)) = self.database.tokens.iter().next() {
+            Ok(self.crypto_manager.decrypt(encrypted_token).is_ok())
+        } else {
+            Err(anyhow::anyhow!("Incorrect master key. Cannot delete token."))
+        }
+    }
     
-    pub fn delete_token(&mut self, name: &str) -> Result<bool> {
-        let removed = self.database.tokens.remove(name).is_some();
+    pub fn delete_token(&mut self, name: String) -> Result<bool> {
+        let _ = self.verify_master_key()?;
+
+        let removed = self.database.tokens.remove(&name).is_some();
         if removed {
             self.save()?;
+            println!("::> Token '{}' deleted successfully!", name);
+        } else {
+            println!("::> Token '{}' not found", name);
         }
         Ok(removed)
+    }
+
+    pub fn populate_tokens(&self) -> Result<()> {
+        for (name, token) in &self.database.tokens {
+            env::set_var(name, token);
+        }
+        Ok(())
     }
 }

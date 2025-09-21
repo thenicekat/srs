@@ -4,15 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# For encryption/decryption
 aes-gcm = "0.10"
 base64 = "0.21"
-# For command line argument parsing
 clap = { version = "4.4", features = ["derive"] }
-# For serialization/deserialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-# For random number generation
 rand = "0.8"
-# For handling errors
 anyhow = "1.0"
+sha2 = "0.10"
+rpassword = "7.4.0"

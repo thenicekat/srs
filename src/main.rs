@@ -1,11 +1,11 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use rpassword::read_password;
 use std::io::{self, Write};
 
 mod crypto;
-use crypto::CryptoManager;
-
 mod storage;
+
 use storage::TokenStorage;
 
 #[derive(Parser)]
@@ -18,29 +18,29 @@ struct CommandLineInterface {
 
 #[derive(Subcommand)]
 enum Commands {
+    #[command(about = "Adds a new value corresponding to the name.")]
     Add {
         name: String,
         token: Option<String>,
     },
+    #[command(about = "Fetches the value of the key corresponding to the name.")]
     Get {
         name: String,
     },
+    #[command(about = "Lists the names of all the available keys.")]
     List,
+    #[command(about = "Deletes the value corresponding to the key.")]
     Delete {
         name: String,
     },
+    #[command(about = "Populates the environment with all these variables.")]
+    Populate,
 }
 
 fn main() -> Result<()> {
     let cli = CommandLineInterface::parse();
-    print!("Enter your master key: ");
-    io::stdout().flush()?;
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-    let master_key = input.trim().to_string();
 
-    let crypto_manager = CryptoManager::new(&master_key)?;
-    let mut storage = TokenStorage::new("tokens.json", crypto_manager)?;
+    let mut storage = TokenStorage::new()?;
     
     match cli.command {
         Commands::Add { name, token } => {
@@ -49,38 +49,32 @@ fn main() -> Result<()> {
                 None => {
                     print!("Enter token for '{}': ", name);
                     io::stdout().flush()?;
-                    let mut input = String::new();
-                    io::stdin().read_line(&mut input)?;
-                    input.trim().to_string()
+                    read_password().expect("Failed to read password")
                 }
             };
             
             storage.store_token(&name, &token_value)?;
-            println!("✅ Token '{}' stored successfully!", name);
+            println!("::> Token '{}' stored successfully!", name);
         }
         Commands::Get { name } => {
             match storage.get_token(&name)? {
                 Some(token) => println!("{}", token),
-                None => println!("❌ Token '{}' not found", name),
+                None => println!("::> Token '{}' not found", name),
             }
         }
         Commands::List => {
             let tokens = storage.list_tokens()?;
-            if tokens.is_empty() {
-                println!("No tokens stored.");
-            } else {
-                println!("Stored tokens:");
-                for name in tokens {
-                    println!("  - {}", name);
-                }
+            println!("Stored tokens:");
+            for name in tokens {
+                println!("  - {}", name);
             }
         }
         Commands::Delete { name } => {
-            if storage.delete_token(&name)? {
-                println!("✅ Token '{}' deleted successfully!", name);
-            } else {
-                println!("❌ Token '{}' not found", name);
-            }
+            storage.delete_token(name)?;
+        }
+        Commands::Populate => {
+            storage.populate_tokens()?;
+            println!("::> Environment variables populated successfully!");
         }
     }
     
