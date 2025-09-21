@@ -36,7 +36,7 @@ impl TokenStorage {
     pub fn new() -> Result<Self> {
         let crypto_manager: CryptoManager = CryptoManager::new()?;
         let mut storage = Self {
-            file_path: (*CONFIG_PATH.clone()).to_path_buf(),
+            file_path: CONFIG_PATH.to_path_buf(),
             database: TokenDatabase {
                 tokens: HashMap::new(),
             },
