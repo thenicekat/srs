@@ -23,10 +23,13 @@ A secure command-line tool for storing and managing personal access tokens using
 ```bash
 cargo install --git https://github.com/thenicekat/srs
 ```
+
 ### Setting the Platform specific alias
+
 Add the appropriate alias to your shell's RC file to ensure automatic environment file sourcing:
 
 Bash(.bashrc):
+
 ```bash
 echo 'srs() {
     srs "$@"
@@ -34,6 +37,7 @@ echo 'srs() {
     rm -f ~/.local/share/__srs__.env
 }' >> ~/.bashrc
 ```
+
 ## 📖 Usage
 
 ### Basic Commands
@@ -101,15 +105,6 @@ src/
 └── storage.rs   # Token storage and management
 ```
 
-### Dependencies
-
-- `aes-gcm`: AES-256-GCM encryption
-- `clap`: Command-line argument parsing
-- `rpassword`: Secure password input
-- `serde`: JSON serialization
-- `anyhow`: Error handling
-- `sha2`: SHA-256 hashing
-
 ### Building
 
 ```bash
@@ -126,28 +121,11 @@ cargo test
 cargo check
 ```
 
-## 🔧 Configuration
-
-### Environment Variables
-
-The `populate` command sets environment variables for the current session:
-
-```bash
-srs populate
-# Sets: GITHUB_TOKEN=your_actual_token
-#       API_KEY=your_actual_key
-# etc.
-```
-
 ## ⚠️ Important Security Notes
 
 1. **Backup Your Master Key**: If you forget it, your data is permanently lost
-2. **File Permissions**: Restrict access to `srs_token_store.json`:
-   ```bash
-   chmod 600 srs_token_store.json
-   ```
-3. **Master Key Strength**: Use a strong, unique master key
-4. **Environment Variables**: Be careful when using `populate` in shared environments
+2. **Master Key Strength**: Use a strong, unique master key
+3. **Environment Variables**: Be careful when using `populate` in shared environments
 
 **⚠️ Security Warning**: This tool handles sensitive data. Always use strong master keys and keep your token store file secure.
 
