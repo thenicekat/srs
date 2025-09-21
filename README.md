@@ -30,8 +30,8 @@ Bash(.bashrc):
 ```bash
 echo 'srs() {
     srs "$@"
-    source ~/.local/share/srs.env 2>/dev/null || true
-    rm -f ~/.local/share/srs.env
+    source ~/.local/share/__srs__.env 2>/dev/null || true
+    rm -f ~/.local/share/__srs__.env
 }' >> ~/.bashrc
 ```
 ## 📖 Usage
