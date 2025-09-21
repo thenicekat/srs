@@ -1,12 +1,12 @@
+use crate::crypto::CryptoManager;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
+use std::io::Write;
 use std::path::Path;
-use crate::crypto::CryptoManager;
-use std::io::{Write};
-use std::sync::LazyLock;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 #[cfg(target_os = "linux")]
 pub static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
@@ -42,11 +42,11 @@ impl TokenStorage {
             },
             crypto_manager,
         };
-        
+
         storage.load()?;
         Ok(storage)
     }
-    
+
     fn load(&mut self) -> Result<()> {
         if Path::new(&self.file_path).exists() {
             let content = fs::read_to_string(&self.file_path)?;
@@ -54,20 +54,22 @@ impl TokenStorage {
         }
         Ok(())
     }
-    
+
     fn save(&self) -> Result<()> {
         let content = serde_json::to_string_pretty(&self.database)?;
         fs::write(&self.file_path, content)?;
         Ok(())
     }
-    
+
     pub fn store_token(&mut self, name: &str, token: &str) -> Result<()> {
         let encrypted_token = self.crypto_manager.encrypt(token)?;
-        self.database.tokens.insert(name.to_string(), encrypted_token);
+        self.database
+            .tokens
+            .insert(name.to_string(), encrypted_token);
         self.save()?;
         Ok(())
     }
-    
+
     pub fn get_token(&self, name: &str) -> Result<Option<String>> {
         match self.database.tokens.get(name) {
             Some(encrypted_token) => {
@@ -77,7 +79,7 @@ impl TokenStorage {
             None => Ok(None),
         }
     }
-    
+
     pub fn list_tokens(&self) -> Result<Vec<String>> {
         let _ = self.verify_master_key()?;
         Ok(self.database.tokens.keys().cloned().collect())
@@ -85,16 +87,20 @@ impl TokenStorage {
 
     fn verify_master_key(&self) -> Result<bool> {
         if self.database.tokens.is_empty() {
-            return Err(anyhow::anyhow!("No tokens found, please add a token to start."));
+            return Err(anyhow::anyhow!(
+                "No tokens found, please add a token to start."
+            ));
         }
-        
+
         if let Some((_, encrypted_token)) = self.database.tokens.iter().next() {
             Ok(self.crypto_manager.decrypt(encrypted_token).is_ok())
         } else {
-            Err(anyhow::anyhow!("Incorrect master key. Cannot delete token."))
+            Err(anyhow::anyhow!(
+                "Incorrect master key. Cannot delete token."
+            ))
         }
     }
-    
+
     pub fn delete_token(&mut self, name: String) -> Result<bool> {
         let _ = self.verify_master_key()?;
 
@@ -110,7 +116,7 @@ impl TokenStorage {
 
     pub fn populate_tokens(&self) -> Result<()> {
         let _ = self.verify_master_key()?;
-    
+
         let mut env_file = std::fs::File::create(&*ENV_PATH)?;
         for (name, encrypted_token) in &self.database.tokens {
             let decrypted_token = self.crypto_manager.decrypt(encrypted_token)?;
