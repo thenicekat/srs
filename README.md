@@ -13,18 +13,36 @@ A secure command-line tool for storing and managing personal access tokens using
 
 ## 🚀 Installation
 
-### Prerequisites
+### Quick Install (Recommended)
+
+#### Universal Install (Auto-detects platform)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thenicekat/srs/main/install.sh | bash
+```
+
+The install script will:
+
+- Automatically detect your system architecture
+- Download the latest release from GitHub
+- Install the binary to `~/.local/bin`
+- Set up the shell alias for automatic environment variable sourcing
+- Add the binary to your PATH (if needed)
+
+### Manual Installation
+
+#### Prerequisites
 
 - Rust 1.70+ installed on your system
 - [Install Rust](https://rustup.rs/) if you haven't already
 
-### Installing the Binary
+#### Installing the Binary from cargo
 
 ```bash
 cargo install --git https://github.com/thenicekat/srs
 ```
 
-### Setting the Platform specific alias
+#### Setting the Platform specific alias
 
 Add the appropriate alias to your shell's RC file to ensure automatic environment file sourcing:
 
@@ -36,6 +54,16 @@ echo 'srs() {
     source ~/.local/share/__srs__.env 2>/dev/null || true
     rm -f ~/.local/share/__srs__.env
 }' >> ~/.bashrc
+```
+
+Zsh(.zshrc):
+
+```bash
+echo 'srs() {
+    srs "$@"
+    source ~/.local/share/__srs__.env 2>/dev/null || true
+    rm -f ~/.local/share/__srs__.env
+}' >> ~/.zshrc
 ```
 
 ## 📖 Usage
