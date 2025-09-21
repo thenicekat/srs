@@ -3,10 +3,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::env;
 use crate::crypto::CryptoManager;
+use std::io::{Write};
 
 const FILE_PATH: &str = "srs_token_store.json";
+const ENV_PATH: &str = ".env.srs";
 
 #[derive(Serialize, Deserialize)]
 struct TokenDatabase {
@@ -96,10 +97,15 @@ impl TokenStorage {
     }
 
     pub fn populate_tokens(&self) -> Result<()> {
+        let _ = self.verify_master_key()?;
+    
+        let mut file = std::fs::File::create(ENV_PATH)?;
         for (name, encrypted_token) in &self.database.tokens {
             let decrypted_token = self.crypto_manager.decrypt(encrypted_token)?;
-            env::set_var(name, decrypted_token);
+            writeln!(file, "{}={}", name, decrypted_token)?;
         }
+        println!("::> Created {} file", ENV_PATH);
+        println!("::> Please run: source {} && rm {}", ENV_PATH, ENV_PATH);
         Ok(())
     }
 }
