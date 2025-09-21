@@ -135,8 +135,8 @@ setup_shell_alias() {
     
     local alias_function="srs() {
     command srs \"\$@\"
-    source \"$env_path\" 2>/dev/null || true
-    rm -f \"$env_path\"
+    source $env_path 2>/dev/null || true
+    rm -f $env_path
 }"
     
     if grep -q "srs()" "$shell_rc" 2>/dev/null; then
@@ -155,7 +155,6 @@ setup_shell_alias() {
     print_warning "Please run 'source $shell_rc' or restart your terminal to use the alias"
 }
 
-# Function to check if binary is in PATH
 check_path() {
     if ! command -v "$BINARY_NAME" &> /dev/null; then
         print_warning "SRS binary not found in PATH"

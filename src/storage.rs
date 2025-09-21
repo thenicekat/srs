@@ -126,7 +126,6 @@ impl TokenStorage {
             let decrypted_token = self.crypto_manager.decrypt(encrypted_token)?;
             writeln!(env_file, "{}={}", name, decrypted_token)?;
         }
-        println!("::> Created {} file", (*ENV_PATH).display());
         Ok(())
     }
 }

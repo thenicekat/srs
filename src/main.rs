@@ -68,6 +68,5 @@ fn main() -> Result<()> {
             println!("::> Environment variables populated successfully!");
         }
     }
-
     Ok(())
 }
