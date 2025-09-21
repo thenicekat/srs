@@ -78,15 +78,27 @@ jobs:
         with:
           path: ./artifacts
 
+      - name: Rename and prepare release files
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cp ./artifacts/srs-linux-x86_64/srs ./srs-linux-x86_64-v$VERSION
+          cp ./artifacts/srs-windows-x86_64.exe/srs.exe ./srs-windows-x86_64-v$VERSION.exe
+          cp ./artifacts/srs-macos-x86_64/srs ./srs-macos-x86_64-v$VERSION
+          cp ./artifacts/srs-macos-aarch64/srs ./srs-macos-aarch64-v$VERSION
+
+          chmod +x ./srs-linux-x86_64-v$VERSION
+          chmod +x ./srs-macos-x86_64-v$VERSION
+          chmod +x ./srs-macos-aarch64-v$VERSION
+
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
           files: |
-            ./artifacts/srs-linux-x86_64/srs
-            ./artifacts/srs-windows-x86_64.exe/srs.exe
-            ./artifacts/srs-macos-x86_64/srs
-            ./artifacts/srs-macos-aarch64/srs
+            ./srs-linux-x86_64-v${{ steps.version.outputs.version }}
+            ./srs-windows-x86_64-v${{ steps.version.outputs.version }}.exe
+            ./srs-macos-x86_64-v${{ steps.version.outputs.version }}
+            ./srs-macos-aarch64-v${{ steps.version.outputs.version }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
