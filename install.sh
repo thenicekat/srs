@@ -119,11 +119,25 @@ install_binary() {
 
 setup_shell_alias() {
     local shell_rc=$1
-    local alias_function='srs() {
-    srs "$@"
-    source ~/.local/share/__srs__.env 2>/dev/null || true
-    rm -f ~/.local/share/__srs__.env
-}'
+    local env_path=""
+    
+    case $(uname -s) in
+        Darwin)
+            env_path="~/Library/Application\ Support/srs/__srs__.env"
+            ;;
+        Linux)
+            env_path="~/.local/share/srs/__srs__.env"
+            ;;
+        *)
+            env_path="~/.local/share/srs/__srs__.env"
+            ;;
+    esac
+    
+    local alias_function="srs() {
+    command srs \"\$@\"
+    source \"$env_path\" 2>/dev/null || true
+    rm -f \"$env_path\"
+}"
     
     if grep -q "srs()" "$shell_rc" 2>/dev/null; then
         print_warning "SRS alias already exists in $shell_rc"
