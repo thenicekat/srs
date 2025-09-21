@@ -37,12 +37,13 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Add { name, token } => {
-            let token_value = if let Some(t) = token {
-                t
-            } else {
-                print!("Enter token for '{}': ", name);
-                io::stdout().flush()?;
-                read_password().expect("Failed to read password")
+            let token_value = match token {
+                Some(t) => t,
+                None => {
+                    print!("Enter token for '{}': ", name);
+                    io::stdout().flush()?;
+                    read_password().expect("Failed to read password")
+                }
             };
 
             storage.store_token(&name, &token_value)?;
