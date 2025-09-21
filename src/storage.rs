@@ -8,7 +8,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
-#[cfg(target_os = "linux")]
 pub static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     let mut home_dir = std::env::home_dir().expect("This means something is very wrong.");
     home_dir.push("srs.json");
