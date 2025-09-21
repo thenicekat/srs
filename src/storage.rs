@@ -5,9 +5,21 @@ use std::fs;
 use std::path::Path;
 use crate::crypto::CryptoManager;
 use std::io::{Write};
+use std::sync::LazyLock;
+use std::path::PathBuf;
 
-const FILE_PATH: &str = "srs_token_store.json";
-const ENV_PATH: &str = ".env.srs";
+#[cfg(target_os = "linux")]
+pub static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    let mut home_dir = std::env::home_dir().expect("This means something is very wrong.");
+    home_dir.push("srs.json");
+    home_dir
+});
+
+pub static ENV_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    let mut temp_dir = std::env::temp_dir();
+    temp_dir.push("srs.env");
+    temp_dir
+});
 
 #[derive(Serialize, Deserialize)]
 struct TokenDatabase {
@@ -15,7 +27,7 @@ struct TokenDatabase {
 }
 
 pub struct TokenStorage {
-    file_path: String,
+    file_path: PathBuf,
     database: TokenDatabase,
     crypto_manager: CryptoManager,
 }
@@ -24,7 +36,7 @@ impl TokenStorage {
     pub fn new() -> Result<Self> {
         let crypto_manager: CryptoManager = CryptoManager::new()?;
         let mut storage = Self {
-            file_path: FILE_PATH.to_string(),
+            file_path: (*CONFIG_PATH.clone()).to_path_buf(),
             database: TokenDatabase {
                 tokens: HashMap::new(),
             },
@@ -99,13 +111,12 @@ impl TokenStorage {
     pub fn populate_tokens(&self) -> Result<()> {
         let _ = self.verify_master_key()?;
     
-        let mut file = std::fs::File::create(ENV_PATH)?;
+        let mut env_file = std::fs::File::create(&*ENV_PATH)?;
         for (name, encrypted_token) in &self.database.tokens {
             let decrypted_token = self.crypto_manager.decrypt(encrypted_token)?;
-            writeln!(file, "{}={}", name, decrypted_token)?;
+            writeln!(env_file, "{}={}", name, decrypted_token)?;
         }
-        println!("::> Created {} file", ENV_PATH);
-        println!("::> Please run: source {} && rm {}", ENV_PATH, ENV_PATH);
+        println!("::> Created {} file", (*ENV_PATH).display());
         Ok(())
     }
 }
