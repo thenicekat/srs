@@ -18,22 +18,21 @@ A secure command-line tool for storing and managing personal access tokens using
 - Rust 1.70+ installed on your system
 - [Install Rust](https://rustup.rs/) if you haven't already
 
-### Steps
+### Installing the Binary
 
-Bash:
 ```bash
-# Install the program
 cargo install --git https://github.com/thenicekat/srs
+```
+### Setting the Platform specific alias
+Add the appropriate alias to your shell's RC file to ensure automatic environment file sourcing:
 
-# Just renaming the binary, as the final script also uses the same name
-cp ~/.cargo/bin/srs ~/.local/bin/srs-bin
-
-# Add this to your .bashrc, this will ensure automatic env file sourcing
-srs() {
-    srs-bin "$@"
-    source /tmp/srs.env 2>/dev/null || true
-    rm -f /tmp/srs.env
-}
+Bash(.bashrc):
+```bash
+echo 'srs() {
+    srs "$@"
+    source ~/.local/share/srs.env 2>/dev/null || true
+    rm -f ~/.local/share/srs.env
+}' >> ~/.bashrc
 ```
 ## 📖 Usage
 

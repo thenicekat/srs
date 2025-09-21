@@ -7,17 +7,18 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::LazyLock;
+use dirs;
 
 pub static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
-    let mut home_dir = std::env::home_dir().expect("This means something is very wrong.");
-    home_dir.push("srs.json");
-    home_dir
+    let mut data_local_dir = dirs::data_local_dir().unwrap();
+    data_local_dir.push("srs.json");
+    data_local_dir
 });
 
 pub static ENV_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
-    let mut temp_dir = std::env::temp_dir();
-    temp_dir.push("srs.env");
-    temp_dir
+    let mut data_local_dir = dirs::data_local_dir().unwrap();
+    data_local_dir.push("srs.env");
+    data_local_dir
 });
 
 #[derive(Serialize, Deserialize)]
