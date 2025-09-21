@@ -96,8 +96,9 @@ impl TokenStorage {
     }
 
     pub fn populate_tokens(&self) -> Result<()> {
-        for (name, token) in &self.database.tokens {
-            env::set_var(name, token);
+        for (name, encrypted_token) in &self.database.tokens {
+            let decrypted_token = self.crypto_manager.decrypt(encrypted_token)?;
+            env::set_var(name, decrypted_token);
         }
         Ok(())
     }
