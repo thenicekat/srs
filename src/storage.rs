@@ -17,7 +17,7 @@ pub static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
 
 pub static ENV_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     let mut data_local_dir = dirs::data_local_dir().unwrap();
-    data_local_dir.push("srs.env");
+    data_local_dir.push("__srs__.env");
     data_local_dir
 });
 
