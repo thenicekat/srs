@@ -25,9 +25,8 @@ The install script will:
 
 - Automatically detect your system architecture
 - Download the latest release from GitHub
-- Install the binary to `~/.local/bin`
+- Install the binary to `~/.local/bin` and add it to your PATH.
 - Set up the shell alias for automatic environment variable sourcing
-- Add the binary to your PATH (if needed)
 
 ### Manual Installation
 
@@ -51,8 +50,8 @@ Bash(.bashrc):
 ```bash
 echo 'srs() {
     srs "$@"
-    source ~/.local/share/__srs__.env 2>/dev/null || true
-    rm -f ~/.local/share/__srs__.env
+    source ~/.local/share/srs/__srs__.env 2>/dev/null || true
+    rm -f ~/.local/share/srs/__srs__.env
 }' >> ~/.bashrc
 ```
 
@@ -61,44 +60,22 @@ Zsh(.zshrc):
 ```bash
 echo 'srs() {
     srs "$@"
-    source ~/.local/share/__srs__.env 2>/dev/null || true
-    rm -f ~/.local/share/__srs__.env
+    source ~/.local/share/srs/__srs__.env 2>/dev/null || true
+    rm -f ~/.local/share/srs/__srs__.env
 }' >> ~/.zshrc
 ```
 
 ## 📖 Usage
 
-### Basic Commands
-
-```bash
-# Add a new token.
-srs add github_token
-
-# Add a token with value directly.
-srs add github_token --token "ghp_xxxxxxxxxxxx"
-
-# Retrieve a token.
-srs get github_token
-
-# List all stored tokens.
-srs list
-
-# Delete a token.
-srs delete github_token
-
-# Populate environment variables.
-srs populate
-```
-
 ### Command Reference
 
-| Command                        | Description               | Example                   |
-| ------------------------------ | ------------------------- | ------------------------- |
-| `add <name> [--token <value>]` | Store a new token         | `srs add github_token`    |
-| `get <name>`                   | Retrieve a token          | `srs get github_token`    |
-| `list`                         | List all token names      | `srs list`                |
-| `delete <name>`                | Delete a token            | `srs delete github_token` |
-| `populate`                     | Set environment variables | `srs populate`            |
+| Command                | Description               | Example                                                    |
+| ---------------------- | ------------------------- | ---------------------------------------------------------- |
+| `add <name> [<value>]` | Store a new token         | `srs add github_token token_value`, `srs add github_token` |
+| `get <name>`           | Retrieve a token          | `srs get github_token`                                     |
+| `list`                 | List all token names      | `srs list`                                                 |
+| `delete <name>`        | Delete a token            | `srs delete github_token`                                  |
+| `env`                  | Set environment variables | `srs env`                                                  |
 
 ## 🔒 Security Features
 
