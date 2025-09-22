@@ -27,7 +27,7 @@ enum Commands {
     #[command(about = "Deletes the value corresponding to the key.")]
     Delete { name: String },
     #[command(about = "Populates the environment with all these variables.")]
-    Populate,
+    Env,
 }
 
 fn main() -> Result<()> {
@@ -63,7 +63,8 @@ fn main() -> Result<()> {
         Commands::Delete { name } => {
             storage.delete_token(name)?;
         }
-        Commands::Populate => {
+        Commands::Env => {
+            println!("::> Disclaimer: This creates and deletes a .env file in your local store.");
             storage.populate_tokens()?;
             println!("::> Environment variables populated successfully!");
         }
