@@ -64,9 +64,8 @@ fn main() -> Result<()> {
             storage.delete_token(name)?;
         }
         Commands::Env => {
-            println!("::> Disclaimer: This creates and deletes a .env file in your local store.");
+            println!("::> Disclaimer: This creates and deletes a .env file in your local store. This will add the env variables for this particular shell session only.");
             storage.populate_tokens()?;
-            println!("::> Environment variables populated successfully!");
         }
     }
     Ok(())
