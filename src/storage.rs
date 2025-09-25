@@ -113,20 +113,16 @@ impl TokenStorage {
 
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
 
-        let mut exports = String::new();
+        // Build environment variables for the child process
+        let mut child_env = std::env::vars().collect::<std::collections::HashMap<String, String>>();
+        
         for (name, encrypted_token) in &self.database.tokens {
             let decrypted_token = self.crypto_manager.decrypt(encrypted_token)?;
-            exports.push_str(&format!("export {}={}; ", name, decrypted_token));
+            child_env.insert(name.clone(), decrypted_token);
         }
 
-        let shell_name = std::path::Path::new(&shell)
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("bash");
-
         let mut child = std::process::Command::new(&shell)
-            .arg("-c")
-            .arg(format!("{} exec {}", exports, shell_name))
+            .envs(&child_env)
             .spawn()?;
 
         child.wait()?;
