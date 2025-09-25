@@ -140,8 +140,8 @@ mod tests {
         }
 
         // Use a constant key to avoid prompting
-        let test_key = [0u8; 32];
-        let crypto_manager = CryptoManager::from_key(test_key);
+        let key = [0u8; 32];
+        let crypto_manager = CryptoManager::from_key(key);
 
         TokenStorage {
             file_path: temp_path,
@@ -153,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn test_store_and_get_token() {
+    fn store_and_get_token() {
         let mut storage = setup_storage();
         storage.store_token("foo", "bar").unwrap();
 
@@ -162,14 +162,14 @@ mod tests {
     }
 
     #[test]
-    fn test_get_nonexistent_token() {
+    fn get_nonexistent_token() {
         let storage = setup_storage();
         let token = storage.get_token("nonexistent").unwrap();
         assert!(token.is_none());
     }
 
     #[test]
-    fn test_delete_token() {
+    fn delete_token() {
         let mut storage = setup_storage();
         storage.store_token("foo", "bar").unwrap();
         let deleted = storage.delete_token("foo").unwrap();
@@ -180,14 +180,14 @@ mod tests {
     }
 
     #[test]
-    fn test_delete_nonexistent_token() {
+    fn delete_nonexistent_token() {
         let mut storage = setup_storage();
         let deleted = storage.delete_token("nonexistent").unwrap();
         assert!(!deleted);
     }
 
     #[test]
-    fn test_list_tokens() {
+    fn list_tokens() {
         let mut storage = setup_storage();
         storage.store_token("foo", "bar").unwrap();
         storage.store_token("baz", "qux").unwrap();
@@ -198,7 +198,7 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_master_key_with_tokens() {
+    fn verify_master_key_with_tokens() {
         let mut storage = setup_storage();
         storage.store_token("foo", "bar").unwrap();
         let verified = storage.verify_master_key().unwrap();
@@ -206,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn test_save_and_load() {
+    fn save_and_load() {
         let mut storage = setup_storage();
         storage.store_token("foo", "bar").unwrap();
 

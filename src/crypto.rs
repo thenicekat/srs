@@ -84,7 +84,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_encrypt_decrypt() {
+    fn encrypt_decrypt() {
         let crypto = CryptoManager::from_key([0u8; 32]);
         let plaintext = "my_secret_token";
 
@@ -94,14 +94,14 @@ mod tests {
     }
 
     #[test]
-    fn test_decrypt_invalid_data() {
+    fn decrypt_invalid_data() {
         let crypto = CryptoManager::from_key([0u8; 32]);
         let result = crypto.decrypt("not_base64");
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_decrypt_corrupted_data() {
+    fn decrypt_corrupted_data() {
         let crypto = CryptoManager::from_key([0u8; 32]);
         let plaintext = "secret";
         let mut encrypted = crypto.encrypt(plaintext).unwrap();
