@@ -110,26 +110,25 @@ impl TokenStorage {
 
     pub fn populate_tokens_to_child(&self) -> Result<()> {
         let _ = self.verify_master_key()?;
-        
-        let shell = std::env::var("SHELL")
-            .unwrap_or_else(|_| "/bin/sh".to_string());
-        
+
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+
         let mut exports = String::new();
         for (name, encrypted_token) in &self.database.tokens {
             let decrypted_token = self.crypto_manager.decrypt(encrypted_token)?;
             exports.push_str(&format!("export {}={}; ", name, decrypted_token));
         }
-        
+
         let shell_name = std::path::Path::new(&shell)
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("bash");
-        
+
         let mut child = std::process::Command::new(&shell)
             .arg("-c")
             .arg(format!("{} exec {}", exports, shell_name))
             .spawn()?;
-        
+
         child.wait()?;
         Ok(())
     }
