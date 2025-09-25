@@ -1,0 +1,30 @@
+name: Build, lint and test.
+on: pull_request_target
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Format
+        run: cargo fmt
+
+      - name: Link
+        run: cargo fix
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Test
+        run: cargo test --verbose
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: format code with prettier"
+          branch: ${{ github.event.pull_request.head.ref }}
+          file_pattern: ":(exclude)Cargo.lock"
