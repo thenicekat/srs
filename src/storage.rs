@@ -6,7 +6,6 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::LazyLock;
-use dirs;
 
 pub static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     let mut data_local_dir = dirs::data_local_dir().unwrap();
