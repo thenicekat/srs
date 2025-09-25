@@ -128,3 +128,98 @@ impl TokenStorage {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn setup_storage() -> TokenStorage {
+        let temp_path = std::env::temp_dir().join("srs_test.json");
+        if temp_path.exists() {
+            let _ = std::fs::remove_file(&temp_path);
+        }
+
+        // Use a constant key to avoid prompting
+        let test_key = [0u8; 32];
+        let crypto_manager = CryptoManager::from_key(test_key);
+
+        TokenStorage {
+            file_path: temp_path,
+            database: TokenDatabase {
+                tokens: HashMap::new(),
+            },
+            crypto_manager,
+        }
+    }
+
+    #[test]
+    fn test_store_and_get_token() {
+        let mut storage = setup_storage();
+        storage.store_token("foo", "bar").unwrap();
+
+        let token = storage.get_token("foo").unwrap();
+        assert_eq!(token.unwrap(), "bar");
+    }
+
+    #[test]
+    fn test_get_nonexistent_token() {
+        let storage = setup_storage();
+        let token = storage.get_token("nonexistent").unwrap();
+        assert!(token.is_none());
+    }
+
+    #[test]
+    fn test_delete_token() {
+        let mut storage = setup_storage();
+        storage.store_token("foo", "bar").unwrap();
+        let deleted = storage.delete_token("foo".to_string()).unwrap();
+        assert!(deleted);
+
+        let token = storage.get_token("foo").unwrap();
+        assert!(token.is_none());
+    }
+
+    #[test]
+    fn test_delete_nonexistent_token() {
+        let mut storage = setup_storage();
+        let deleted = storage.delete_token("nonexistent".to_string()).unwrap();
+        assert!(!deleted);
+    }
+
+    #[test]
+    fn test_list_tokens() {
+        let mut storage = setup_storage();
+        storage.store_token("foo", "bar").unwrap();
+        storage.store_token("baz", "qux").unwrap();
+
+        let tokens = storage.list_tokens().unwrap();
+        assert!(tokens.contains(&"foo".to_string()));
+        assert!(tokens.contains(&"baz".to_string()));
+    }
+
+    #[test]
+    fn test_verify_master_key_with_tokens() {
+        let mut storage = setup_storage();
+        storage.store_token("foo", "bar").unwrap();
+        let verified = storage.verify_master_key().unwrap();
+        assert!(verified);
+    }
+
+    #[test]
+    fn test_save_and_load() {
+        let mut storage = setup_storage();
+        storage.store_token("foo", "bar").unwrap();
+
+        // Create a new instance pointing to the same file
+        let mut storage2 = TokenStorage {
+            file_path: storage.file_path.clone(),
+            database: TokenDatabase {
+                tokens: HashMap::new(),
+            },
+            crypto_manager: CryptoManager::from_key([0u8; 32]),
+        };
+        storage2.load().unwrap();
+        let token = storage2.get_token("foo").unwrap();
+        assert_eq!(token.unwrap(), "bar");
+    }
+}
