@@ -12,11 +12,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy,rustfmt
-      - name: Format
-        run: cargo fmt
 
       - name: Lint
         run: cargo fix
+
+      - name: Format
+        run: cargo fmt
 
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
