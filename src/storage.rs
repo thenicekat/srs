@@ -122,7 +122,7 @@ impl TokenStorage {
         let _ = self.verify_master_key()?;
         
         let shell = std::env::var("SHELL")
-            .unwrap_or_else(|_| "/bin/bash".to_string());
+            .unwrap_or_else(|_| "/bin/sh".to_string());
         
         let mut exports = String::new();
         for (name, encrypted_token) in &self.database.tokens {
