@@ -104,10 +104,10 @@ impl TokenStorage {
         }
     }
 
-    pub fn delete_token(&mut self, name: String) -> Result<bool> {
+    pub fn delete_token(&mut self, name: &str) -> Result<bool> {
         let _ = self.verify_master_key()?;
 
-        let removed = self.database.tokens.remove(&name).is_some();
+        let removed = self.database.tokens.remove(name).is_some();
         if removed {
             self.save()?;
             println!("::> Token '{}' deleted successfully!", name);
@@ -172,7 +172,7 @@ mod tests {
     fn test_delete_token() {
         let mut storage = setup_storage();
         storage.store_token("foo", "bar").unwrap();
-        let deleted = storage.delete_token("foo".to_string()).unwrap();
+        let deleted = storage.delete_token("foo").unwrap();
         assert!(deleted);
 
         let token = storage.get_token("foo").unwrap();
@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn test_delete_nonexistent_token() {
         let mut storage = setup_storage();
-        let deleted = storage.delete_token("nonexistent".to_string()).unwrap();
+        let deleted = storage.delete_token("nonexistent").unwrap();
         assert!(!deleted);
     }
 
