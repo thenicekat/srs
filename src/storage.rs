@@ -3,7 +3,6 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::LazyLock;
@@ -14,14 +13,6 @@ pub static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     data_local_dir.push("srs");
     let _ = fs::create_dir_all(&data_local_dir);
     data_local_dir.push("srs.json");
-    data_local_dir
-});
-
-pub static ENV_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
-    let mut data_local_dir = dirs::data_local_dir().unwrap();
-    data_local_dir.push("srs");
-    let _ = fs::create_dir_all(&data_local_dir);
-    data_local_dir.push("__srs__.env");
     data_local_dir
 });
 
