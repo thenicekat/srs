@@ -115,7 +115,7 @@ impl TokenStorage {
 
         // Build environment variables for the child process
         let mut child_env = std::env::vars().collect::<std::collections::HashMap<String, String>>();
-        
+
         for (name, encrypted_token) in &self.database.tokens {
             let decrypted_token = self.crypto_manager.decrypt(encrypted_token)?;
             child_env.insert(name.clone(), decrypted_token);
