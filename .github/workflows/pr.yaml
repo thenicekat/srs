@@ -16,6 +16,9 @@ jobs:
       - name: Lint
         run: cargo fix
 
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
       - name: Build
         run: cargo build --release
 
