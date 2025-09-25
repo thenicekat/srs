@@ -26,8 +26,8 @@ enum Commands {
     List,
     #[command(about = "Deletes the value corresponding to the key.")]
     Delete { name: String },
-    #[command(about = "Populates the environment with all these variables.")]
-    Env,
+    #[command(about = "Spawns a new shell with all tokens loaded via memory pipe.")]
+    Shell,
 }
 
 fn main() -> Result<()> {
@@ -63,9 +63,9 @@ fn main() -> Result<()> {
         Commands::Delete { name } => {
             storage.delete_token(name)?;
         }
-        Commands::Env => {
-            println!("::> Disclaimer: This creates and deletes a .env file in your local store. This will add the env variables for this particular shell session only.");
-            storage.populate_tokens()?;
+        Commands::Shell => {
+            println!("::> Spawning new shell with SRS tokens loaded...");
+            storage.populate_tokens_to_child()?;
         }
     }
     Ok(())
