@@ -1,0 +1,36 @@
+name: Build, lint and test.
+on: pull_request
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+
+      - name: Lint
+        run: cargo fix
+
+      - name: Format
+        run: cargo fmt
+
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Test
+        run: cargo test --verbose
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: format code"
+          branch: ${{ github.event.pull_request.head.ref }}
+          file_pattern: ":(exclude)Cargo.lock"
