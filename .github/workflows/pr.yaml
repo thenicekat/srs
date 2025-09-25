@@ -13,7 +13,7 @@ jobs:
       - name: Format
         run: cargo fmt
 
-      - name: Link
+      - name: Lint
         run: cargo fix
 
       - name: Build
