@@ -107,7 +107,11 @@ mod tests {
         let mut encrypted = crypto.encrypt(plaintext).unwrap();
 
         // Corrupt one character
-        encrypted.replace_range(0..1, "X");
+        if encrypted.chars().nth(0) != Some('X') {
+            encrypted.replace_range(0..1, "X");
+        } else {
+            encrypted.replace_range(0..1, "Y");
+        }
         let result = crypto.decrypt(&encrypted);
         assert!(result.is_err());
     }

@@ -230,8 +230,8 @@ mod tests {
             crypto_manager,
         };
 
-        storage2.load().unwrap();
         storage.store_token("foo", "bar").unwrap();
+        storage2.load().unwrap();
 
         let token = storage2.get_token("foo").unwrap();
         assert_eq!(token.unwrap(), "bar");
