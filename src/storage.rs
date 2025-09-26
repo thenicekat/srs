@@ -52,8 +52,11 @@ impl TokenStorage {
 
     fn load(&mut self) -> Result<()> {
         if Path::new(&self.file_path).exists() {
+            dbg!(&self.file_path);
             let content = fs::read_to_string(&self.file_path)?;
+            dbg!(&content);
             self.database = serde_json::from_str(&content)?;
+            dbg!(&self.database.tokens);
         }
         Ok(())
     }
@@ -132,9 +135,10 @@ impl TokenStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use uuid::Uuid;
 
     fn setup_storage() -> TokenStorage {
-        let temp_path = std::env::temp_dir().join("srs_test.json");
+        let temp_path = std::env::temp_dir().join(format!("srs_test_{}.json", Uuid::new_v4()));
         if temp_path.exists() {
             let _ = std::fs::remove_file(&temp_path);
         }
@@ -143,13 +147,16 @@ mod tests {
         let key = [0u8; 32];
         let crypto_manager = CryptoManager::from_key(key);
 
-        TokenStorage {
+        let mut storage = TokenStorage {
             file_path: temp_path,
             database: TokenDatabase {
                 tokens: HashMap::new(),
             },
             crypto_manager,
-        }
+        };
+
+        storage.load().unwrap();
+        storage
     }
 
     #[test]
@@ -208,18 +215,29 @@ mod tests {
     #[test]
     fn save_and_load() {
         let mut storage = setup_storage();
-        storage.store_token("foo", "bar").unwrap();
-
         // Create a new instance pointing to the same file
+        let temp_path = &storage.file_path;
+        if temp_path.exists() {
+            let _ = std::fs::remove_file(&temp_path);
+        }
+
+        // Use a constant key to avoid prompting
+        let key = [0u8; 32];
+        let crypto_manager = CryptoManager::from_key(key);
+
         let mut storage2 = TokenStorage {
-            file_path: storage.file_path.clone(),
+            file_path: temp_path.to_path_buf(),
             database: TokenDatabase {
                 tokens: HashMap::new(),
             },
-            crypto_manager: CryptoManager::from_key([0u8; 32]),
+            crypto_manager,
         };
+
         storage2.load().unwrap();
+        storage.store_token("foo", "bar").unwrap();
+
         let token = storage2.get_token("foo").unwrap();
+        dbg!(&token);
         assert_eq!(token.unwrap(), "bar");
     }
 }
