@@ -86,6 +86,9 @@ detect_shell() {
             SHELL_RC="$HOME/.zshrc"
             ;;
     esac
+    
+    print_status "Detected shell: $shell_name"
+    print_status "Using shell RC: $SHELL_RC"
 }
 
 get_latest_version() {
@@ -117,52 +120,30 @@ install_binary() {
     print_success "Binary installed to $binary_path"
 }
 
-setup_shell_alias() {
+setup_path() {
     local shell_rc=$1
-    local env_path=""
     
-    case $(uname -s) in
-        Darwin)
-            env_path="~/Library/Application\ Support/srs/__srs__.env"
-            ;;
-        Linux)
-            env_path="~/.local/share/srs/__srs__.env"
-            ;;
-        *)
-            env_path="~/.local/share/srs/__srs__.env"
-            ;;
-    esac
-    
-    local alias_function="srs() {
-    command srs \"\$@\"
-    source $env_path 2>/dev/null || true
-    rm -f $env_path
-}"
-    
-    if grep -q "srs()" "$shell_rc" 2>/dev/null; then
-        print_warning "SRS alias already exists in $shell_rc"
+    # Check if INSTALL_DIR is already in PATH
+    if echo "$PATH" | grep -q "$INSTALL_DIR"; then
+        print_success "SRS directory already in PATH"
         return 0
     fi
     
-    print_status "Adding SRS alias to $shell_rc..."
+    print_status "Adding SRS to PATH in $shell_rc..."
     
-    # Add alias to shell RC file
+    # Add PATH export to shell RC file
     echo "" >> "$shell_rc"
     echo "# SRS - Secure Rust Storage" >> "$shell_rc"
-    echo "$alias_function" >> "$shell_rc"
+    echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$shell_rc"
     
-    print_success "Shell alias added to $shell_rc"
-    print_warning "Please run 'source $shell_rc' or restart your terminal to use the alias"
+    print_success "PATH updated in $shell_rc"
+    print_warning "Please run 'source $shell_rc' or restart your terminal to use SRS"
 }
 
 check_path() {
     if ! command -v "$BINARY_NAME" &> /dev/null; then
         print_warning "SRS binary not found in PATH"
-        print_status "Please add $INSTALL_DIR to your PATH:"
-        echo "export PATH=\"\$PATH:$INSTALL_DIR\""
-        echo ""
-        print_status "Add this line to your $SHELL_RC:"
-        echo "export PATH=\"\$PATH:$INSTALL_DIR\""
+        print_status "Please run 'source $SHELL_RC' or restart your terminal"
     else
         print_success "SRS is available in PATH"
     fi
@@ -196,7 +177,7 @@ main() {
     
     install_binary "$version" "$platform"
     
-    setup_shell_alias "$SHELL_RC"
+    setup_path "$SHELL_RC"
     
     check_path
     

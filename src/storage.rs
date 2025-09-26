@@ -3,7 +3,6 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::LazyLock;
@@ -13,14 +12,6 @@ pub static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     data_local_dir.push("srs");
     let _ = fs::create_dir_all(&data_local_dir);
     data_local_dir.push("srs.json");
-    data_local_dir
-});
-
-pub static ENV_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
-    let mut data_local_dir = dirs::data_local_dir().unwrap();
-    data_local_dir.push("srs");
-    let _ = fs::create_dir_all(&data_local_dir);
-    data_local_dir.push("__srs__.env");
     data_local_dir
 });
 
@@ -117,14 +108,24 @@ impl TokenStorage {
         Ok(removed)
     }
 
-    pub fn populate_tokens(&self) -> Result<()> {
+    pub fn populate_tokens_to_child(&self) -> Result<()> {
         let _ = self.verify_master_key()?;
 
-        let mut env_file = std::fs::File::create(&*ENV_PATH)?;
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+
+        // Build environment variables for the child process
+        let mut child_env = std::env::vars().collect::<std::collections::HashMap<String, String>>();
+
         for (name, encrypted_token) in &self.database.tokens {
             let decrypted_token = self.crypto_manager.decrypt(encrypted_token)?;
-            writeln!(env_file, "{}={}", name, decrypted_token)?;
+            child_env.insert(name.clone(), decrypted_token);
         }
+
+        let mut child = std::process::Command::new(&shell)
+            .envs(&child_env)
+            .spawn()?;
+
+        child.wait()?;
         Ok(())
     }
 }
