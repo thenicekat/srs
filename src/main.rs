@@ -61,7 +61,7 @@ fn main() -> Result<()> {
             }
         }
         Commands::Delete { name } => {
-            storage.delete_token(name)?;
+            storage.delete_token(&name)?;
         }
         Commands::Env => {
             println!("::> Disclaimer: This creates and deletes a .env file in your local store. This will add the env variables for this particular shell session only.");

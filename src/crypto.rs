@@ -18,6 +18,11 @@ impl CryptoManager {
         })
     }
 
+    #[cfg(test)]
+    pub fn from_key(key: [u8; 32]) -> Self {
+        Self { master_key: key }
+    }
+
     pub fn encrypt(&self, plaintext: &str) -> Result<String> {
         let mut nonce_bytes = [0u8; 12];
         rand::thread_rng().fill(&mut nonce_bytes);
@@ -72,4 +77,42 @@ fn derive_master_key() -> Result<[u8; 32]> {
     let mut key = [0u8; 32];
     key.copy_from_slice(&hash);
     Ok(key)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encrypt_decrypt() {
+        let crypto = CryptoManager::from_key([0u8; 32]);
+        let plaintext = "my_secret_token";
+
+        let encrypted = crypto.encrypt(plaintext).unwrap();
+        let decrypted = crypto.decrypt(&encrypted).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn decrypt_invalid_data() {
+        let crypto = CryptoManager::from_key([0u8; 32]);
+        let result = crypto.decrypt("not_base64");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn decrypt_corrupted_data() {
+        let crypto = CryptoManager::from_key([0u8; 32]);
+        let plaintext = "secret";
+        let mut encrypted = crypto.encrypt(plaintext).unwrap();
+
+        // Corrupt one character
+        if !encrypted.starts_with('X') {
+            encrypted.replace_range(0..1, "X");
+        } else {
+            encrypted.replace_range(0..1, "Y");
+        }
+        let result = crypto.decrypt(&encrypted);
+        assert!(result.is_err());
+    }
 }

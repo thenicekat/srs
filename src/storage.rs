@@ -104,10 +104,10 @@ impl TokenStorage {
         }
     }
 
-    pub fn delete_token(&mut self, name: String) -> Result<bool> {
+    pub fn delete_token(&mut self, name: &str) -> Result<bool> {
         let _ = self.verify_master_key()?;
 
-        let removed = self.database.tokens.remove(&name).is_some();
+        let removed = self.database.tokens.remove(name).is_some();
         if removed {
             self.save()?;
             println!("::> Token '{}' deleted successfully!", name);
@@ -126,5 +126,114 @@ impl TokenStorage {
             writeln!(env_file, "{}={}", name, decrypted_token)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+
+    fn setup_storage() -> TokenStorage {
+        let temp_path = std::env::temp_dir().join(format!("srs_test_{}.json", Uuid::new_v4()));
+        if temp_path.exists() {
+            let _ = std::fs::remove_file(&temp_path);
+        }
+
+        // Use a constant key to avoid prompting
+        let key = [0u8; 32];
+        let crypto_manager = CryptoManager::from_key(key);
+
+        let mut storage = TokenStorage {
+            file_path: temp_path,
+            database: TokenDatabase {
+                tokens: HashMap::new(),
+            },
+            crypto_manager,
+        };
+
+        storage.load().unwrap();
+        storage
+    }
+
+    #[test]
+    fn store_and_get_token() {
+        let mut storage = setup_storage();
+        storage.store_token("foo", "bar").unwrap();
+
+        let token = storage.get_token("foo").unwrap();
+        assert_eq!(token.unwrap(), "bar");
+    }
+
+    #[test]
+    fn get_nonexistent_token() {
+        let storage = setup_storage();
+        let token = storage.get_token("nonexistent").unwrap();
+        assert!(token.is_none());
+    }
+
+    #[test]
+    fn delete_token() {
+        let mut storage = setup_storage();
+        storage.store_token("foo", "bar").unwrap();
+        let deleted = storage.delete_token("foo").unwrap();
+        assert!(deleted);
+
+        let token = storage.get_token("foo").unwrap();
+        assert!(token.is_none());
+    }
+
+    #[test]
+    fn delete_nonexistent_token() {
+        let mut storage = setup_storage();
+        let result = storage.delete_token("nonexistent").is_err();
+        assert!(result);
+    }
+
+    #[test]
+    fn list_tokens() {
+        let mut storage = setup_storage();
+        storage.store_token("foo", "bar").unwrap();
+        storage.store_token("baz", "qux").unwrap();
+
+        let tokens = storage.list_tokens().unwrap();
+        assert!(tokens.contains(&"foo".to_string()));
+        assert!(tokens.contains(&"baz".to_string()));
+    }
+
+    #[test]
+    fn verify_master_key_with_tokens() {
+        let mut storage = setup_storage();
+        storage.store_token("foo", "bar").unwrap();
+        let verified = storage.verify_master_key().unwrap();
+        assert!(verified);
+    }
+
+    #[test]
+    fn save_and_load() {
+        let mut storage = setup_storage();
+        // Create a new instance pointing to the same file
+        let temp_path = &storage.file_path;
+        if temp_path.exists() {
+            let _ = std::fs::remove_file(temp_path);
+        }
+
+        // Use a constant key to avoid prompting
+        let key = [0u8; 32];
+        let crypto_manager = CryptoManager::from_key(key);
+
+        let mut storage2 = TokenStorage {
+            file_path: temp_path.to_path_buf(),
+            database: TokenDatabase {
+                tokens: HashMap::new(),
+            },
+            crypto_manager,
+        };
+
+        storage.store_token("foo", "bar").unwrap();
+        storage2.load().unwrap();
+
+        let token = storage2.get_token("foo").unwrap();
+        assert_eq!(token.unwrap(), "bar");
     }
 }
