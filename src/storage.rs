@@ -215,7 +215,7 @@ mod tests {
         // Create a new instance pointing to the same file
         let temp_path = &storage.file_path;
         if temp_path.exists() {
-            let _ = std::fs::remove_file(&temp_path);
+            let _ = std::fs::remove_file(temp_path);
         }
 
         // Use a constant key to avoid prompting
