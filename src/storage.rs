@@ -52,11 +52,8 @@ impl TokenStorage {
 
     fn load(&mut self) -> Result<()> {
         if Path::new(&self.file_path).exists() {
-            dbg!(&self.file_path);
             let content = fs::read_to_string(&self.file_path)?;
-            dbg!(&content);
             self.database = serde_json::from_str(&content)?;
-            dbg!(&self.database.tokens);
         }
         Ok(())
     }
@@ -237,7 +234,6 @@ mod tests {
         storage.store_token("foo", "bar").unwrap();
 
         let token = storage2.get_token("foo").unwrap();
-        dbg!(&token);
         assert_eq!(token.unwrap(), "bar");
     }
 }
