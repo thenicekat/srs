@@ -182,8 +182,8 @@ mod tests {
     #[test]
     fn delete_nonexistent_token() {
         let mut storage = setup_storage();
-        let deleted = storage.delete_token("nonexistent").unwrap();
-        assert!(!deleted);
+        let result = storage.delete_token("nonexistent").is_err();
+        assert!(result);
     }
 
     #[test]
