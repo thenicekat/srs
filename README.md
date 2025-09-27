@@ -6,16 +6,13 @@ A secure command-line tool for storing and managing personal access tokens using
 
 - **AES-256-GCM Encryption**: Military-grade encryption for your sensitive data.
 - **Master Key Protection**: Your master key is never stored, only used to derive encryption keys.
-- **Masked Input**: Secure password input with asterisk masking.
 - **Environment Integration**: Populate environment variables with stored tokens
-- **Cross-Platform**: Works on Windows, macOS, and Linux.
+- **Cross-Platform**: Works on macOS and Linux. (NOTE: Windows to be tested.)
 - **Zero Dependencies**: No external services or cloud dependencies. All your data stays on your computer.
 
 ## 🚀 Installation
 
 ### Quick Install (Recommended)
-
-#### Universal Install (Auto-detects platform)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/thenicekat/srs/main/install.sh | bash
@@ -23,10 +20,9 @@ curl -fsSL https://raw.githubusercontent.com/thenicekat/srs/main/install.sh | ba
 
 The install script will:
 
-- Automatically detect your system architecture
-- Download the latest release from GitHub
-- Install the binary to `~/.local/bin` and add it to your PATH.
-- Set up the shell alias for automatic environment variable sourcing
+- Automatically detect your system architecture.
+- Download the latest release from GitHub.
+- Install the binary and add it to your PATH.
 
 ### Manual Installation
 
@@ -41,41 +37,17 @@ The install script will:
 cargo install --git https://github.com/thenicekat/srs
 ```
 
-#### Setting the Platform specific alias
-
-Add the appropriate alias to your shell's RC file to ensure automatic environment file sourcing:
-
-Bash(.bashrc):
-
-```bash
-echo 'srs() {
-    srs "$@"
-    source ~/.local/share/srs/__srs__.env 2>/dev/null || true
-    rm -f ~/.local/share/srs/__srs__.env
-}' >> ~/.bashrc
-```
-
-Zsh(.zshrc):
-
-```bash
-echo 'srs() {
-    srs "$@"
-    source ~/.local/share/srs/__srs__.env 2>/dev/null || true
-    rm -f ~/.local/share/srs/__srs__.env
-}' >> ~/.zshrc
-```
-
 ## 📖 Usage
 
 ### Command Reference
 
-| Command                | Description               | Example                                                    |
-| ---------------------- | ------------------------- | ---------------------------------------------------------- |
-| `add <name> [<value>]` | Store a new token         | `srs add github_token token_value`, `srs add github_token` |
-| `get <name>`           | Retrieve a token          | `srs get github_token`                                     |
-| `list`                 | List all token names      | `srs list`                                                 |
-| `delete <name>`        | Delete a token            | `srs delete github_token`                                  |
-| `env`                  | Set environment variables | `srs env`                                                  |
+| Command                | Description                                | Example                                                    |
+| ---------------------- | ------------------------------------------ | ---------------------------------------------------------- |
+| `add <name> [<value>]` | Store a new token                          | `srs add github_token token_value`, `srs add github_token` |
+| `get <name>`           | Retrieve a token                           | `srs get github_token`                                     |
+| `list`                 | List all token names                       | `srs list`                                                 |
+| `delete <name>`        | Delete a token                             | `srs delete github_token`                                  |
+| `shell`                | Creates a new shell with the env populated | `srs shell`                                                |
 
 ## 🔒 Security Features
 
@@ -92,12 +64,7 @@ echo 'srs() {
 - Entered securely with masked input (asterisks)
 - Used only to derive the encryption key
 - Forgotten master key = lost data (by design)
-
-### Data Storage
-
-- Tokens stored in `srs_token_store.json`
-- All data encrypted before storage
-- File permissions should be restricted (600 recommended)
+- All data is encrypted before storage
 
 ## 🛠️ Development
 
@@ -130,7 +97,7 @@ cargo check
 
 1. **Backup Your Master Key**: If you forget it, your data is permanently lost
 2. **Master Key Strength**: Use a strong, unique master key
-3. **Environment Variables**: Be careful when using `populate` in shared environments
+3. **Environment Variables**: Be careful when using `shell` in shared environments
 
 **⚠️ Security Warning**: This tool handles sensitive data. Always use strong master keys and keep your token store file secure.
 
