@@ -7,7 +7,7 @@ A secure command-line tool for storing and managing personal access tokens using
 - **AES-256-GCM Encryption**: Military-grade encryption for your sensitive data.
 - **Master Key Protection**: Your master key is never stored, only used to derive encryption keys.
 - **Environment Integration**: Populate environment variables with stored tokens
-- **Cross-Platform**: Works on macOS and Linux. (NOTE: Windows to be tested.)
+- **Cross-Platform**: Works on macOS and Linux. (Windows compatibility under development)
 - **Zero Dependencies**: No external services or cloud dependencies. All your data stays on your computer.
 
 ## 🚀 Installation
