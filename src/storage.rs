@@ -33,10 +33,7 @@ impl TokenStorage {
 
         #[cfg(target_os = "linux")]
         {
-            #[cfg(feature = "dbus-secret-service")]
             use dbus_secret_service_keyring_store::Store as LinuxStore;
-            #[cfg(feature = "linux-keyutils")]
-            use linux_keyutils_keyring_store::Store as LinuxStore;
             let store = LinuxStore::new()?;
             keyring_core::set_default_store(store);
         }
