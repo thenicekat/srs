@@ -1,8 +1,8 @@
 use crate::crypto::CryptoManager;
 use anyhow::Result;
+use keyring_core::Entry;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use keyring_core::Entry;
 
 #[derive(Serialize, Deserialize)]
 struct TokenDatabase {
@@ -43,7 +43,7 @@ impl TokenStorage {
 
         let crypto_manager: CryptoManager = CryptoManager::new()?;
         let keyring_entry = keyring_core::Entry::new("srs", "thenicekat")?;
-        
+
         let mut storage = Self {
             database: TokenDatabase {
                 tokens: HashMap::new(),
@@ -51,7 +51,7 @@ impl TokenStorage {
             crypto_manager,
             keyring_entry,
         };
-        
+
         storage.load()?;
         storage.save()?;
         Ok(storage)
@@ -163,14 +163,14 @@ mod tests {
             let store = MacOSStore::new().unwrap();
             keyring_core::set_default_store(store);
         }
-        
+
         #[cfg(target_os = "windows")]
         {
             use windows_native_keyring_store::Store as WindowsStore;
             let store = WindowsStore::new().unwrap();
             keyring_core::set_default_store(store);
         }
-        
+
         #[cfg(target_os = "linux")]
         {
             // For Linux tests, we'll use a mock or skip if no store is available
