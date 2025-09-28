@@ -26,7 +26,7 @@ impl TokenStorage {
 
         #[cfg(target_os = "macos")]
         {
-            use apple_native_keyring_store::keychain::Store as MacOSStore;
+            use apple_native_keyring_store::protected::Store as MacOSStore;
             let store = MacOSStore::new()?;
             keyring_core::set_default_store(store);
         }
@@ -157,10 +157,9 @@ mod tests {
     use super::*;
 
     fn setup_storage() -> TokenStorage {
-        // Set up the keyring store for tests
         #[cfg(target_os = "macos")]
         {
-            use apple_native_keyring_store::keychain::Store as MacOSStore;
+            use apple_native_keyring_store::protected::Store as MacOSStore;
             let store = MacOSStore::new().unwrap();
             keyring_core::set_default_store(store);
         }
