@@ -809,6 +809,7 @@ dependencies = [
  "clap",
  "dbus-secret-service-keyring-store",
  "dirs",
+ "keyring-core 0.5.0",
  "keyring-core 0.7.0",
  "rand",
  "rpassword",
