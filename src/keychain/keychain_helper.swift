@@ -54,7 +54,8 @@ public func getToken(_ keyPtr: UnsafePointer<CChar>) -> UnsafePointer<CChar>? {
         kSecAttrAccount: keyString,
         kSecAttrService: "com.thenicekat.srs",
         kSecReturnData: true,
-        kSecMatchLimit: kSecMatchLimitOne
+        kSecMatchLimit: kSecMatchLimitOne,
+        kSecUseAuthenticationUI: kSecUseAuthenticationUIAllow
     ]
     
     var item: CFTypeRef?
@@ -63,13 +64,8 @@ public func getToken(_ keyPtr: UnsafePointer<CChar>) -> UnsafePointer<CChar>? {
     if status == errSecSuccess, let data = item as? Data, let tokenString = String(data: data, encoding: .utf8) {
         if let result = strdup(tokenString) {
             return UnsafePointer(result)
-        } else {
-    
-        }
-    } else {
-
+        } 
     }
-    
     return nil
 }
 
