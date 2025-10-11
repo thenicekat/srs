@@ -1,3 +1,4 @@
+use crate::auth::macos::BiometricAuthenticator;
 use crate::crypto::CryptoManager;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -6,6 +7,8 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::LazyLock;
+
+use crate::auth;
 
 pub static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     let mut data_local_dir = dirs::data_local_dir().unwrap();
@@ -36,6 +39,10 @@ impl TokenStorage {
             },
             crypto_manager,
         };
+
+        let auth = auth::macos::MacOSAuthenticator::new()?;
+        auth.authenticate("hello")?;
+
 
         storage.load()?;
         Ok(storage)
