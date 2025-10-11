@@ -5,7 +5,7 @@ use std::io::{self, Write};
 
 mod crypto;
 mod storage;
-mod auth;
+mod keychain;
 
 use storage::TokenStorage;
 

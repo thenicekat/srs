@@ -15,7 +15,7 @@ fn main() {
             "-enable-library-evolution",
             "-emit-module",
             "-parse-as-library",
-            "src/auth/macos/helper.swift",
+            "src/keychain/keychain_helper.swift",
         ])
         .output()
         .expect("Failed to compile Swift code");
@@ -50,7 +50,7 @@ fn main() {
     println!("cargo:rustc-link-lib=framework=Foundation");
 
     // Rebuild if Swift file changes
-    println!("cargo:rerun-if-changed=src/auth/macos/helper.swift");
+    println!("cargo:rerun-if-changed=src/keychain/keychain_helper.swift");
 }
 
 #[cfg(not(target_os = "macos"))]

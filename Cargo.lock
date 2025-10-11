@@ -556,6 +556,7 @@ dependencies = [
  "base64",
  "clap",
  "dirs",
+ "libc",
  "rand",
  "rpassword",
  "serde",

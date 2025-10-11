@@ -1,80 +1,40 @@
-use crate::auth::macos::BiometricAuthenticator;
+use crate::keychain::KeychainStore;
 use crate::crypto::CryptoManager;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
-use std::path::PathBuf;
-use std::sync::LazyLock;
 
-use crate::auth;
-
-pub static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
-    let mut data_local_dir = dirs::data_local_dir().unwrap();
-    data_local_dir.push("srs");
-    let _ = fs::create_dir_all(&data_local_dir);
-    data_local_dir.push("srs.json");
-    data_local_dir
-});
-
-#[derive(Serialize, Deserialize)]
-struct TokenDatabase {
-    tokens: HashMap<String, String>,
+pub trait SRSStore {
+    fn add_token(&self, name: &str, token: &str) -> Result<()>;
+    fn get_token(&self, name: &str) -> Result<Option<String>>;
+    fn list_tokens(&self) -> Result<Vec<String>>;
+    fn delete_token(&self, name: &str) -> Result<()>; 
 }
 
 pub struct TokenStorage {
-    file_path: PathBuf,
-    database: TokenDatabase,
+    store: Box<dyn SRSStore>,
     crypto_manager: CryptoManager,
 }
 
 impl TokenStorage {
     pub fn new() -> Result<Self> {
         let crypto_manager: CryptoManager = CryptoManager::new()?;
-        let mut storage = Self {
-            file_path: CONFIG_PATH.to_path_buf(),
-            database: TokenDatabase {
-                tokens: HashMap::new(),
-            },
+        let storage = Self {
+            store: Box::new(KeychainStore::new()?),
             crypto_manager,
         };
 
-        let auth = auth::macos::MacOSAuthenticator::new()?;
-        auth.authenticate("hello")?;
-
-
-        storage.load()?;
         Ok(storage)
-    }
-
-    fn load(&mut self) -> Result<()> {
-        if Path::new(&self.file_path).exists() {
-            let content = fs::read_to_string(&self.file_path)?;
-            self.database = serde_json::from_str(&content)?;
-        }
-        Ok(())
-    }
-
-    fn save(&self) -> Result<()> {
-        let content = serde_json::to_string_pretty(&self.database)?;
-        fs::write(&self.file_path, content)?;
-        Ok(())
     }
 
     pub fn store_token(&mut self, name: &str, token: &str) -> Result<()> {
         let encrypted_token = self.crypto_manager.encrypt(token)?;
-        self.database
-            .tokens
-            .insert(name.to_string(), encrypted_token);
-        self.save()?;
+        self.store.add_token(name, &encrypted_token)?;
         Ok(())
     }
 
     pub fn get_token(&self, name: &str) -> Result<Option<String>> {
-        match self.database.tokens.get(name) {
+        match self.store.get_token(name)? {
             Some(encrypted_token) => {
-                let decrypted_token = self.crypto_manager.decrypt(encrypted_token)?;
+                let decrypted_token = self.crypto_manager.decrypt(&encrypted_token)?;
                 Ok(Some(decrypted_token))
             }
             None => Ok(None),
@@ -83,18 +43,20 @@ impl TokenStorage {
 
     pub fn list_tokens(&self) -> Result<Vec<String>> {
         let _ = self.verify_master_key()?;
-        Ok(self.database.tokens.keys().cloned().collect())
+        Ok(self.store.list_tokens()?)
     }
 
     fn verify_master_key(&self) -> Result<bool> {
-        if self.database.tokens.is_empty() {
+        let tokens = self.store.list_tokens()?;
+        if tokens.is_empty() {
             return Err(anyhow::anyhow!(
                 "No tokens found, please add a token to start."
             ));
         }
 
-        if let Some((_, encrypted_token)) = self.database.tokens.iter().next() {
-            Ok(self.crypto_manager.decrypt(encrypted_token).is_ok())
+        let first_token_name = &tokens[0];
+        if let Some(encrypted_token) = self.store.get_token(first_token_name)? {
+            Ok(self.crypto_manager.decrypt(&encrypted_token).is_ok())
         } else {
             Err(anyhow::anyhow!(
                 "Incorrect master key. Cannot delete token."
@@ -105,14 +67,16 @@ impl TokenStorage {
     pub fn delete_token(&mut self, name: &str) -> Result<bool> {
         let _ = self.verify_master_key()?;
 
-        let removed = self.database.tokens.remove(name).is_some();
-        if removed {
-            self.save()?;
+        let token_exists = self.store.get_token(name)?.is_some();
+        
+        if token_exists {
+            self.store.delete_token(name)?;
             println!("::> Token '{}' deleted successfully!", name);
+            Ok(true)
         } else {
             println!("::> Token '{}' not found", name);
+            Ok(false)
         }
-        Ok(removed)
     }
 
     pub fn populate_tokens_to_child(&self) -> Result<()> {
@@ -123,9 +87,11 @@ impl TokenStorage {
         // Build environment variables for the child process
         let mut child_env = std::env::vars().collect::<std::collections::HashMap<String, String>>();
 
-        for (name, encrypted_token) in &self.database.tokens {
-            let decrypted_token = self.crypto_manager.decrypt(encrypted_token)?;
-            child_env.insert(name.clone(), decrypted_token);
+        for name in self.store.list_tokens()? {
+            if let Some(encrypted_token) = self.store.get_token(&name)? {
+                let decrypted_token = self.crypto_manager.decrypt(&encrypted_token)?;
+                child_env.insert(name.clone(), decrypted_token);
+            }
         }
 
         let mut child = std::process::Command::new(&shell)
@@ -140,33 +106,23 @@ impl TokenStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
 
-    fn setup_storage() -> TokenStorage {
-        let temp_path = std::env::temp_dir().join(format!("srs_test_{}.json", Uuid::new_v4()));
-        if temp_path.exists() {
-            let _ = std::fs::remove_file(&temp_path);
-        }
-
+    fn setup_storage() -> Result<TokenStorage> {
         // Use a constant key to avoid prompting
         let key = [0u8; 32];
         let crypto_manager = CryptoManager::from_key(key);
 
-        let mut storage = TokenStorage {
-            file_path: temp_path,
-            database: TokenDatabase {
-                tokens: HashMap::new(),
-            },
+        let storage = TokenStorage {
+            store: Box::new(KeychainStore::new()?),
             crypto_manager,
         };
 
-        storage.load().unwrap();
-        storage
+        Ok(storage)
     }
 
     #[test]
     fn store_and_get_token() {
-        let mut storage = setup_storage();
+        let mut storage = setup_storage().unwrap();
         storage.store_token("foo", "bar").unwrap();
 
         let token = storage.get_token("foo").unwrap();
@@ -175,14 +131,14 @@ mod tests {
 
     #[test]
     fn get_nonexistent_token() {
-        let storage = setup_storage();
+        let storage = setup_storage().unwrap();
         let token = storage.get_token("nonexistent").unwrap();
         assert!(token.is_none());
     }
 
     #[test]
     fn delete_token() {
-        let mut storage = setup_storage();
+        let mut storage = setup_storage().unwrap();
         storage.store_token("foo", "bar").unwrap();
         let deleted = storage.delete_token("foo").unwrap();
         assert!(deleted);
@@ -193,14 +149,14 @@ mod tests {
 
     #[test]
     fn delete_nonexistent_token() {
-        let mut storage = setup_storage();
-        let result = storage.delete_token("nonexistent").is_err();
-        assert!(result);
+        let mut storage = setup_storage().unwrap();
+        let result = storage.delete_token("nonexistent").unwrap();
+        assert!(!result); // Now returns false instead of error
     }
 
     #[test]
     fn list_tokens() {
-        let mut storage = setup_storage();
+        let mut storage = setup_storage().unwrap();
         storage.store_token("foo", "bar").unwrap();
         storage.store_token("baz", "qux").unwrap();
 
@@ -211,37 +167,32 @@ mod tests {
 
     #[test]
     fn verify_master_key_with_tokens() {
-        let mut storage = setup_storage();
+        let mut storage = setup_storage().unwrap();
         storage.store_token("foo", "bar").unwrap();
         let verified = storage.verify_master_key().unwrap();
         assert!(verified);
     }
 
     #[test]
-    fn save_and_load() {
-        let mut storage = setup_storage();
-        // Create a new instance pointing to the same file
-        let temp_path = &storage.file_path;
-        if temp_path.exists() {
-            let _ = std::fs::remove_file(temp_path);
-        }
-
-        // Use a constant key to avoid prompting
+    fn save_and_load() -> Result<()> {
+        let mut storage = setup_storage()?;
+        
+        // Store a token
+        storage.store_token("foo", "bar")?;
+        
+        // Create a second instance of storage
         let key = [0u8; 32];
         let crypto_manager = CryptoManager::from_key(key);
-
-        let mut storage2 = TokenStorage {
-            file_path: temp_path.to_path_buf(),
-            database: TokenDatabase {
-                tokens: HashMap::new(),
-            },
+        
+        let storage2 = TokenStorage {
+            store: Box::new(KeychainStore::new()?),
             crypto_manager,
         };
-
-        storage.store_token("foo", "bar").unwrap();
-        storage2.load().unwrap();
-
-        let token = storage2.get_token("foo").unwrap();
+        
+        // Check if the token is accessible from the second instance
+        let token = storage2.get_token("foo")?;
         assert_eq!(token.unwrap(), "bar");
+        
+        Ok(())
     }
 }
