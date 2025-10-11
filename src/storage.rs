@@ -1,12 +1,12 @@
-use crate::keychain::KeychainStore;
 use crate::crypto::CryptoManager;
+use crate::keychain::KeychainStore;
 use anyhow::Result;
 
 pub trait SRSStore {
     fn add_token(&self, name: &str, token: &str) -> Result<()>;
     fn get_token(&self, name: &str) -> Result<Option<String>>;
     fn list_tokens(&self) -> Result<Vec<String>>;
-    fn delete_token(&self, name: &str) -> Result<()>; 
+    fn delete_token(&self, name: &str) -> Result<()>;
 }
 
 pub struct TokenStorage {
@@ -68,7 +68,7 @@ impl TokenStorage {
         let _ = self.verify_master_key()?;
 
         let token_exists = self.store.get_token(name)?.is_some();
-        
+
         if token_exists {
             self.store.delete_token(name)?;
             println!("::> Token '{}' deleted successfully!", name);
@@ -176,23 +176,23 @@ mod tests {
     #[test]
     fn save_and_load() -> Result<()> {
         let mut storage = setup_storage()?;
-        
+
         // Store a token
         storage.store_token("foo", "bar")?;
-        
+
         // Create a second instance of storage
         let key = [0u8; 32];
         let crypto_manager = CryptoManager::from_key(key);
-        
+
         let storage2 = TokenStorage {
             store: Box::new(KeychainStore::new()?),
             crypto_manager,
         };
-        
+
         // Check if the token is accessible from the second instance
         let token = storage2.get_token("foo")?;
         assert_eq!(token.unwrap(), "bar");
-        
+
         Ok(())
     }
 }

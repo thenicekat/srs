@@ -4,8 +4,8 @@ use rpassword::read_password;
 use std::io::{self, Write};
 
 mod crypto;
-mod storage;
 mod keychain;
+mod storage;
 
 use storage::TokenStorage;
 
