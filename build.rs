@@ -50,7 +50,7 @@ fn main() {
     println!("cargo:rustc-link-lib=framework=Foundation");
 
     // Rebuild if Swift file changes
-    println!("cargo:rerun-if-changed=src/keychain/keychain_helper.swift");
+    println!("cargo:rerun-if-changed=src/keychain/macos/keychain_helper.swift");
 }
 
 #[cfg(not(target_os = "macos"))]
