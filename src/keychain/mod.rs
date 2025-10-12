@@ -1,8 +1,13 @@
 use crate::storage::SRSStore;
 use anyhow::Result;
+
+#[cfg(target_os = "macos")]
 use libc;
+#[cfg(target_os = "macos")]
 use serde;
+#[cfg(target_os = "macos")]
 use serde_json;
+#[cfg(target_os = "macos")]
 use std::ffi::{CStr, CString};
 
 #[cfg(target_os = "macos")]
@@ -12,6 +17,9 @@ unsafe extern "C" {
     fn list_tokens() -> *const std::os::raw::c_char;
     fn delete_token(key: *const std::os::raw::c_char) -> i32;
 }
+
+#[cfg(target_os = "linux")]
+use keyutils::{keytypes::User, Keyring, Permission, SpecialKeyring};
 
 pub struct KeychainStore;
 
@@ -87,20 +95,42 @@ impl SRSStore for KeychainStore {
 
 #[cfg(target_os = "linux")]
 impl SRSStore for KeychainStore {
-    fn add_token(&self, _name: &str, _token: &str) -> Result<()> {
-        Err(anyhow::anyhow!("Not supported on Linux"))
+    fn add_token(&self, name: &str, token: &str) -> Result<()> {
+        let mut keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        keyring.add_key::<User, &str, &[u8]>(name, token.as_bytes())?;
+
+        Ok(())
     }
 
-    fn get_token(&self, _name: &str) -> Result<Option<String>> {
-        Err(anyhow::anyhow!("Not supported on Linux"))
+    fn get_token(&self, name: &str) -> Result<Option<String>> {
+        let keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        if let Ok(key) = keyring.search_for_key::<User, &str, Option<&mut Keyring>>(name, None) {
+            let payload = key.read()?;
+            let token = String::from_utf8_lossy(&payload).into_owned();
+            return Ok(Some(token));
+        }
+
+        Err(anyhow::anyhow!("Key for name: {} not found", name))
     }
 
     fn list_tokens(&self) -> Result<Vec<String>> {
-        Err(anyhow::anyhow!("Not supported on Linux"))
+        // Attach the per-user keyring
+        let ring: Keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+
+        // read() returns (Vec<Key>, Vec<Keyring>)
+        let (child_keys, _child_rings) = ring.read()?;
+
+        // Use iterator and collect all descriptions into a Vec<String>
+        let names: Result<Vec<String>> = child_keys
+            .into_iter()
+            .map(|key| Ok(key.description()?.description))
+            .collect();
+
+        names
     }
 
-    fn delete_token(&self, _name: &str) -> Result<()> {
-        Err(anyhow::anyhow!("Not supported on Linux"))
+    fn delete_token(&self, name: &str) -> Result<()> {
+        todo!()
     }
 }
 
