@@ -1,4 +1,5 @@
 use crate::crypto::CryptoManager;
+use crate::keychain::InMemoryStore;
 use crate::keychain::KeychainStore;
 use anyhow::Result;
 
