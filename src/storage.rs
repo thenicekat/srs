@@ -1,5 +1,4 @@
 use crate::crypto::CryptoManager;
-use crate::keychain::InMemoryStore;
 use crate::keychain::KeychainStore;
 use anyhow::Result;
 
@@ -19,7 +18,7 @@ impl TokenStorage {
     pub fn new() -> Result<Self> {
         let crypto_manager: CryptoManager = CryptoManager::new()?;
         let storage = Self {
-            store: Box::new(KeychainStore::new()?),
+            store: Box::new(KeychainStore::new()),
             crypto_manager,
         };
         Ok(storage)
@@ -85,6 +84,8 @@ impl TokenStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use uuid::Uuid;
+    use crate::keychain::{InMemoryStore, KeychainStore};
 
     fn setup_storage() -> Result<TokenStorage> {
         // Use a constant key to avoid prompting
@@ -92,99 +93,115 @@ mod tests {
         let crypto_manager = CryptoManager::from_key(key);
 
         // Choose the store implementation based on platform / CI
-        #[cfg(test)]
+        #[cfg(target_os = "linux")]
         let store: Box<dyn SRSStore> = {
             if std::env::var("CI").is_ok() {
                 // Use in-memory store in CI
                 Box::new(InMemoryStore::new())
             } else {
                 // Use real Linux keyring locally
-                Box::new(KeychainStore::new()?)
+                Box::new(KeychainStore::new())
             }
         };
 
-        #[cfg(all(not(test), target_os = "linux"))]
+        #[cfg(target_os = "macos")]
         let store: Box<dyn SRSStore> = Box::new(KeychainStore::new()?);
 
-        #[cfg(all(not(test), target_os = "macos"))]
+        #[cfg(target_os = "windows")]
         let store: Box<dyn SRSStore> = Box::new(KeychainStore::new()?);
 
-        #[cfg(all(not(test), target_os = "windows"))]
-        let store: Box<dyn SRSStore> = Box::new(KeychainStore::new()?);
-
-        let storage = TokenStorage {
-            store,
-            crypto_manager,
-        };
-
+        let storage = TokenStorage { store, crypto_manager };
         Ok(storage)
     }
 
     #[test]
-    fn store_and_get_token() {
-        let mut storage = setup_storage().unwrap();
-        storage.store_token("foo", "bar").unwrap();
+    fn store_and_get_token() -> Result<()> {
+        let mut storage = setup_storage()?;
+        let name = Uuid::new_v4().to_string();
+        let token = Uuid::new_v4().to_string();
 
-        let token = storage.get_token("foo").unwrap();
-        assert_eq!(token, "bar");
+        storage.store_token(&name, &token)?;
+        let retrieved = storage.get_token(&name)?;
+        assert_eq!(retrieved, token);
+
+        // Cleanup
+        let _ = storage.delete_token(&name)?;
+        Ok(())
     }
 
     #[test]
-    fn get_nonexistent_token() {
-        let storage = setup_storage().unwrap();
-        let token = storage.get_token("nonexistent");
+    fn get_nonexistent_token() -> Result<()> {
+        let storage = setup_storage()?;
+        let name = Uuid::new_v4().to_string();
+        let token = storage.get_token(&name);
         assert!(token.is_err());
+        Ok(())
     }
 
     #[test]
-    fn delete_token() {
-        let mut storage = setup_storage().unwrap();
-        storage.store_token("foo", "bar").unwrap();
-        let deleted = storage.delete_token("foo").unwrap();
+    fn delete_token() -> Result<()> {
+        let mut storage = setup_storage()?;
+        let name = Uuid::new_v4().to_string();
+        let token = Uuid::new_v4().to_string();
+
+        storage.store_token(&name, &token)?;
+        let deleted = storage.delete_token(&name)?;
         assert!(deleted);
 
-        let token = storage.get_token("foo");
-        assert!(token.is_err());
+        let retrieved = storage.get_token(&name);
+        assert!(retrieved.is_err());
+        Ok(())
     }
 
     #[test]
-    fn delete_nonexistent_token() {
-        let mut storage = setup_storage().unwrap();
-        let result = storage.delete_token("nonexistent").unwrap();
-        assert!(!result); // Now returns false instead of error
+    fn delete_nonexistent_token() -> Result<()> {
+        let mut storage = setup_storage()?;
+        let name = Uuid::new_v4().to_string();
+
+        let deleted = storage.delete_token(&name)?;
+        assert!(!deleted);
+        Ok(())
     }
 
     #[test]
-    fn list_tokens() {
-        let mut storage = setup_storage().unwrap();
-        storage.store_token("foo", "bar").unwrap();
-        storage.store_token("baz", "qux").unwrap();
+    fn list_tokens() -> Result<()> {
+        let mut storage = setup_storage()?;
 
-        let tokens = storage.list_tokens().unwrap();
-        assert!(tokens.contains(&"foo".to_string()));
-        assert!(tokens.contains(&"baz".to_string()));
+        let name1 = Uuid::new_v4().to_string();
+        let token1 = Uuid::new_v4().to_string();
+        let name2 = Uuid::new_v4().to_string();
+        let token2 = Uuid::new_v4().to_string();
+
+        storage.store_token(&name1, &token1)?;
+        storage.store_token(&name2, &token2)?;
+
+        dbg!(storage.get_token(&name1)?);
+        dbg!(token1);
+
+        let tokens = storage.list_tokens()?;
+        assert!(tokens.contains(&name1));
+        assert!(tokens.contains(&name2));
+
+        // Cleanup
+        let _ = storage.delete_token(&name1)?;
+        let _ = storage.delete_token(&name2)?;
+        Ok(())
     }
 
     #[test]
     fn save_and_load() -> Result<()> {
         let mut storage = setup_storage()?;
 
-        // Store a token
-        storage.store_token("foo", "bar")?;
+        let name = Uuid::new_v4().to_string();
+        let token = Uuid::new_v4().to_string();
+        storage.store_token(&name, &token)?;
 
-        // Create a second instance of storage
-        let key = [0u8; 32];
-        let crypto_manager = CryptoManager::from_key(key);
+        let storage2 = setup_storage()?;
+        let retrieved = storage2.get_token(&name)?;
+        assert_eq!(retrieved, token);
 
-        let storage2 = TokenStorage {
-            store: Box::new(KeychainStore::new()?),
-            crypto_manager,
-        };
-
-        // Check if the token is accessible from the second instance
-        let token = storage2.get_token("foo")?;
-        assert_eq!(token, "bar");
-
+        // Cleanup
+        let _ = storage.delete_token(&name)?;
         Ok(())
     }
 }

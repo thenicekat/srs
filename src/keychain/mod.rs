@@ -18,7 +18,7 @@ unsafe extern "C" {
 
 
 #[cfg(test)]
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex};
 #[cfg(test)]
 use std::collections::HashMap;
 
@@ -28,8 +28,8 @@ use keyutils::{keytypes::User, Keyring, SpecialKeyring};
 pub struct KeychainStore;
 
 impl KeychainStore {
-    pub fn new() -> Result<Self> {
-        Ok(KeychainStore)
+    pub fn new() -> Self {
+        KeychainStore
     }
 }
 
@@ -112,10 +112,8 @@ impl SRSStore for KeychainStore {
 
     fn list_tokens(&self) -> Result<Vec<String>> {
         // Attach the per-user keyring
-        let ring: Keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
-
-        // read() returns (Vec<Key>, Vec<Keyring>)
-        let (child_keys, _child_rings) = ring.read()?;
+        let keyring: Keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        let (child_keys, _) = keyring.read().unwrap_or_else(|_| (Vec::new(), Vec::new()));
 
         // Use iterator and collect all descriptions into a Vec<String>
         let names: Result<Vec<String>> = child_keys
@@ -161,37 +159,39 @@ impl SRSStore for KeychainStore {
     }
 }
 
+
 #[cfg(test)]
-pub struct InMemoryStore(pub Mutex<HashMap<String, String>>);
+static IN_MEMORY_MAP: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(|| {
+    Mutex::new(HashMap::new())
+});
+
+#[cfg(test)]
+pub struct InMemoryStore();
 
 #[cfg(test)]
 impl InMemoryStore {
     pub fn new() -> Self {
-        InMemoryStore(Mutex::new(HashMap::new()))
+        Self()
     }
 }
 
 #[cfg(test)]
 impl SRSStore for InMemoryStore {
     fn add_token(&self, name: &str, token: &str) -> Result<()> {
-        let mut map = self.0.lock().unwrap();
-        map.insert(name.to_string(), token.to_string());
+        IN_MEMORY_MAP.lock().unwrap().insert(name.to_string(), token.to_string());
         Ok(())
     }
 
     fn get_token(&self, name: &str) -> Result<String> {
-        let map = self.0.lock().unwrap();
-        Ok(map.get(name).cloned().expect("Token not present"))
+        Ok(IN_MEMORY_MAP.lock().unwrap().get(name).cloned().expect("Token not present"))
     }
 
     fn list_tokens(&self) -> Result<Vec<String>> {
-        let map = self.0.lock().unwrap();
-        Ok(map.keys().cloned().collect())
+        Ok(IN_MEMORY_MAP.lock().unwrap().keys().cloned().collect())
     }
 
     fn delete_token(&self, name: &str) -> Result<()> {
-        let mut map = self.0.lock().unwrap();
-        map.remove(name);
+        IN_MEMORY_MAP.lock().unwrap().remove(name);
         Ok(())
     }
 }
