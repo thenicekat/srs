@@ -4,15 +4,9 @@ use anyhow::Result;
 #[cfg(target_os = "macos")]
 use libc;
 #[cfg(target_os = "macos")]
-use serde;
-#[cfg(target_os = "macos")]
-use serde_json;
-#[cfg(target_os = "macos")]
 use serde_json::from_str;
 #[cfg(target_os = "macos")]
 use std::ffi::{CStr, CString};
-#[cfg(target_os = "macos")]
-use serde::Deserialize;
 
 #[cfg(target_os = "macos")]
 unsafe extern "C" {
@@ -34,12 +28,6 @@ impl KeychainStore {
 }
 
 #[cfg(target_os = "macos")]
-#[derive(Deserialize)]
-struct TokenResponse {
-    tokens: Vec<String>,
-}
-
-#[cfg(target_os = "macos")]
 impl SRSStore for KeychainStore {
     fn add_token(&self, name: &str, token: &str) -> Result<()> {
         let c_name = CString::new(name)?;
@@ -51,12 +39,12 @@ impl SRSStore for KeychainStore {
         Ok(())
     }
 
-    fn get_token(&self, name: &str) -> Result<Option<String>> {
+    fn get_token(&self, name: &str) -> Result<String> {
         let c_name = CString::new(name)?;
         let token_ptr = unsafe { get_token(c_name.as_ptr()) };
 
         if token_ptr.is_null() {
-            return Ok(None);
+            return Err(anyhow::anyhow!("Token not found"));
         }
 
         let c_str = unsafe { CStr::from_ptr(token_ptr) };
@@ -64,7 +52,7 @@ impl SRSStore for KeychainStore {
 
         unsafe { libc::free(token_ptr as *mut libc::c_void) };
 
-        Ok(Some(token_str))
+        Ok(token_str)
     }
 
     fn list_tokens(&self) -> Result<Vec<String>> {
@@ -77,8 +65,8 @@ impl SRSStore for KeychainStore {
         let c_str = unsafe { CStr::from_ptr(tokens_ptr) };
         let json_str = c_str.to_str().unwrap();
 
-        match from_str::<TokenResponse>(json_str) {
-            Ok(response) => Ok(response.tokens),
+        match from_str(json_str) {
+            Ok(response) => Ok(response),
             Err(e) => {
                 println!(
                     "Error parsing JSON response: {} from string {}",

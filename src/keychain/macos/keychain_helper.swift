@@ -93,18 +93,16 @@ public func listTokens() -> UnsafePointer<CChar>? {
     if status == errSecSuccess, let itemsArray = items as? [[String: Any]] {
         
         let keys = itemsArray.compactMap { $0[kSecAttrAccount as String] as? String }
-        let jsonObject = ["tokens": keys]
+        let finalOutput = keys
         
-        if let jsonData = try? JSONSerialization.data(withJSONObject: jsonObject, options: []),
+        if let jsonData = try? JSONSerialization.data(withJSONObject: finalOutput, options: []),
            let jsonString = String(data: jsonData, encoding: .utf8) {            
             if let result = strdup(jsonString) {
                 return UnsafePointer(result)
             }
-        } else {
         }
     }
-    let emptyObject = "{\"tokens\":[]}"
-    
+    let emptyObject = "[]"
     if let result = strdup(emptyObject) {
         return UnsafePointer(result)
     }
