@@ -15,7 +15,7 @@ fn main() {
             "-enable-library-evolution",
             "-emit-module",
             "-parse-as-library",
-            "src/keychain/keychain_helper.swift",
+            "src/keychain/macos/keychain_helper.swift"
         ])
         .output()
         .expect("Failed to compile Swift code");

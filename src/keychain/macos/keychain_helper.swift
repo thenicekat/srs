@@ -1,6 +1,7 @@
 import LocalAuthentication
 import Foundation
 
+
 enum Status: Int32 {
     case success = 0
     case failed = 1
@@ -8,6 +9,9 @@ enum Status: Int32 {
 
 @_cdecl("add_token")
 public func addToken(_ keyPtr: UnsafePointer<CChar>, _ tokenPtr: UnsafePointer<CChar>) -> Int32 {
+    let context = LAContext()
+    context.touchIDAuthenticationAllowableReuseDuration = 10
+
     let keyString = String(cString: keyPtr)
     let tokenString = String(cString: tokenPtr)
     guard let tokenData = tokenString.data(using: .utf8) else {
@@ -25,7 +29,7 @@ public func addToken(_ keyPtr: UnsafePointer<CChar>, _ tokenPtr: UnsafePointer<C
     let access = SecAccessControlCreateWithFlags(
         kCFAllocatorDefault,
         kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-        .biometryCurrentSet,
+        .userPresence,
         &error
     );
 
@@ -34,7 +38,9 @@ public func addToken(_ keyPtr: UnsafePointer<CChar>, _ tokenPtr: UnsafePointer<C
         kSecAttrAccount: keyString,
         kSecAttrService: "com.thenicekat.srs",
         kSecValueData: tokenData,
-        kSecAttrAccessible: access
+        // TODO: Fix this to get biometric authentication.
+        // kSecAttrAccessControl: access,
+        kSecUseAuthenticationContext: context
     ]
     let status = SecItemAdd(addQuery as CFDictionary, nil)
     
@@ -47,6 +53,9 @@ public func addToken(_ keyPtr: UnsafePointer<CChar>, _ tokenPtr: UnsafePointer<C
 
 @_cdecl("get_token")
 public func getToken(_ keyPtr: UnsafePointer<CChar>) -> UnsafePointer<CChar>? {
+    let context = LAContext()
+    context.localizedReason = "Access your password on the keychain"
+
     let keyString = String(cString: keyPtr)
     
     let query: [CFString: Any] = [
@@ -55,7 +64,7 @@ public func getToken(_ keyPtr: UnsafePointer<CChar>) -> UnsafePointer<CChar>? {
         kSecAttrService: "com.thenicekat.srs",
         kSecReturnData: true,
         kSecMatchLimit: kSecMatchLimitOne,
-        kSecUseAuthenticationUI: kSecUseAuthenticationUIAllow
+        kSecUseAuthenticationContext: context
     ]
     
     var item: CFTypeRef?
@@ -112,7 +121,6 @@ public func deleteToken(_ keyPtr: UnsafePointer<CChar>) -> Int32 {
         kSecAttrAccount as String: keyString,
         kSecAttrService as String: "com.thenicekat.srs"
     ]
-    
     let status = SecItemDelete(query as CFDictionary)
     
     if status == errSecSuccess || status == errSecItemNotFound {

@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 use std::io::{self, Write};
 
 pub struct CryptoManager {
-    master_key: [u8; 32],
+    pub master_key: [u8; 32],
 }
 
 impl CryptoManager {

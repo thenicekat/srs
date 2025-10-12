@@ -50,9 +50,9 @@ fn main() -> Result<()> {
             storage.store_token(&name, &token_value)?;
             println!("::> Token '{}' stored successfully!", name);
         }
-        Commands::Get { name } => match storage.get_token(&name)? {
-            Some(token) => println!("{}", token),
-            None => println!("::> Token '{}' not found", name),
+        Commands::Get { name } => match storage.get_token(&name) {
+            Ok(token) => println!("{}", token),
+            Err(e) => println!("::> Error getting token: {}", e),
         },
         Commands::List => {
             let tokens = storage.list_tokens()?;

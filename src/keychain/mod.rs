@@ -32,7 +32,10 @@ impl SRSStore for KeychainStore {
     fn add_token(&self, name: &str, token: &str) -> Result<()> {
         let c_name = CString::new(name)?;
         let c_token = CString::new(token)?;
-        unsafe { add_token(c_name.as_ptr(), c_token.as_ptr()) };
+        let status = unsafe { add_token(c_name.as_ptr(), c_token.as_ptr()) };
+        if status != 0 {
+            return Err(anyhow::anyhow!("Failed to add token"));
+        }
         Ok(())
     }
 

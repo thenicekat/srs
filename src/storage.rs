@@ -21,7 +21,6 @@ impl TokenStorage {
             store: Box::new(KeychainStore::new()?),
             crypto_manager,
         };
-
         Ok(storage)
     }
 
@@ -31,47 +30,27 @@ impl TokenStorage {
         Ok(())
     }
 
-    pub fn get_token(&self, name: &str) -> Result<Option<String>> {
+    pub fn get_token(&self, name: &str) -> Result<String> {
         match self.store.get_token(name)? {
             Some(encrypted_token) => {
-                let decrypted_token = self.crypto_manager.decrypt(&encrypted_token)?;
-                Ok(Some(decrypted_token))
+                let decrypted_token = self.crypto_manager.decrypt(&encrypted_token);
+                if decrypted_token.is_err() {
+                    return Err(anyhow::anyhow!("Incorrect master key. Cannot decrypt token."));
+                }
+                Ok(decrypted_token.unwrap())
             }
-            None => Ok(None),
+            None => Err(anyhow::anyhow!("Token not found")),
         }
     }
 
     pub fn list_tokens(&self) -> Result<Vec<String>> {
-        let _ = self.verify_master_key()?;
         Ok(self.store.list_tokens()?)
     }
 
-    fn verify_master_key(&self) -> Result<bool> {
-        let tokens = self.store.list_tokens()?;
-        if tokens.is_empty() {
-            return Err(anyhow::anyhow!(
-                "No tokens found, please add a token to start."
-            ));
-        }
-
-        let first_token_name = &tokens[0];
-        if let Some(encrypted_token) = self.store.get_token(first_token_name)? {
-            Ok(self.crypto_manager.decrypt(&encrypted_token).is_ok())
-        } else {
-            Err(anyhow::anyhow!(
-                "Incorrect master key. Cannot delete token."
-            ))
-        }
-    }
-
     pub fn delete_token(&mut self, name: &str) -> Result<bool> {
-        let _ = self.verify_master_key()?;
-
-        let token_exists = self.store.get_token(name)?.is_some();
-
-        if token_exists {
+        let token_value = self.store.get_token(name);
+        if token_value.is_ok() {
             self.store.delete_token(name)?;
-            println!("::> Token '{}' deleted successfully!", name);
             Ok(true)
         } else {
             println!("::> Token '{}' not found", name);
@@ -80,17 +59,14 @@ impl TokenStorage {
     }
 
     pub fn populate_tokens_to_child(&self) -> Result<()> {
-        let _ = self.verify_master_key()?;
-
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
 
         // Build environment variables for the child process
         let mut child_env = std::env::vars().collect::<std::collections::HashMap<String, String>>();
 
         for name in self.store.list_tokens()? {
-            if let Some(encrypted_token) = self.store.get_token(&name)? {
-                let decrypted_token = self.crypto_manager.decrypt(&encrypted_token)?;
-                child_env.insert(name.clone(), decrypted_token);
+            if let Ok(decrypted_token) = self.store.get_token(&name) {
+                child_env.insert(name.clone(), decrypted_token.unwrap());
             }
         }
 
@@ -126,14 +102,14 @@ mod tests {
         storage.store_token("foo", "bar").unwrap();
 
         let token = storage.get_token("foo").unwrap();
-        assert_eq!(token.unwrap(), "bar");
+        assert_eq!(token, "bar");
     }
 
     #[test]
     fn get_nonexistent_token() {
         let storage = setup_storage().unwrap();
         let token = storage.get_token("nonexistent").unwrap();
-        assert!(token.is_none());
+        assert!(token.is_empty());
     }
 
     #[test]
@@ -144,7 +120,7 @@ mod tests {
         assert!(deleted);
 
         let token = storage.get_token("foo").unwrap();
-        assert!(token.is_none());
+        assert!(token.is_empty());
     }
 
     #[test]
@@ -165,13 +141,6 @@ mod tests {
         assert!(tokens.contains(&"baz".to_string()));
     }
 
-    #[test]
-    fn verify_master_key_with_tokens() {
-        let mut storage = setup_storage().unwrap();
-        storage.store_token("foo", "bar").unwrap();
-        let verified = storage.verify_master_key().unwrap();
-        assert!(verified);
-    }
 
     #[test]
     fn save_and_load() -> Result<()> {
@@ -191,7 +160,7 @@ mod tests {
 
         // Check if the token is accessible from the second instance
         let token = storage2.get_token("foo")?;
-        assert_eq!(token.unwrap(), "bar");
+        assert_eq!(token, "bar");
 
         Ok(())
     }
