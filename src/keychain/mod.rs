@@ -1,7 +1,12 @@
 use crate::storage::SRSStore;
 use anyhow::Result;
-use std::ffi::{CStr, CString};
+
+#[cfg(target_os = "macos")]
+use libc;
+#[cfg(target_os = "macos")]
 use serde_json::from_str;
+#[cfg(target_os = "macos")]
+use std::ffi::{CStr, CString};
 
 #[cfg(target_os = "macos")]
 unsafe extern "C" {
@@ -10,6 +15,15 @@ unsafe extern "C" {
     fn list_tokens() -> *const std::os::raw::c_char;
     fn delete_token(key: *const std::os::raw::c_char) -> i32;
 }
+
+
+#[cfg(test)]
+use std::sync::Mutex;
+#[cfg(test)]
+use std::collections::HashMap;
+
+#[cfg(target_os = "linux")]
+use keyutils::{keytypes::User, Keyring, SpecialKeyring};
 
 pub struct KeychainStore;
 
@@ -78,20 +92,53 @@ impl SRSStore for KeychainStore {
 
 #[cfg(target_os = "linux")]
 impl SRSStore for KeychainStore {
-    fn add_token(&self, _name: &str, _token: &str) -> Result<()> {
-        Err(anyhow::anyhow!("Not supported on Linux"))
+    fn add_token(&self, name: &str, token: &str) -> Result<()> {
+        let mut keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        keyring.add_key::<User, &str, &[u8]>(name, token.as_bytes())?;
+
+        Ok(())
     }
 
-    fn get_token(&self, _name: &str) -> Result<Option<String>> {
-        Err(anyhow::anyhow!("Not supported on Linux"))
+    fn get_token(&self, name: &str) -> Result<String> {
+        let keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        if let Ok(key) = keyring.search_for_key::<User, &str, Option<&mut Keyring>>(name, None) {
+            let payload = key.read()?;
+            let token = String::from_utf8_lossy(&payload).into_owned();
+            return Ok(token);
+        }
+
+        Err(anyhow::anyhow!("{}", name))
     }
 
     fn list_tokens(&self) -> Result<Vec<String>> {
-        Err(anyhow::anyhow!("Not supported on Linux"))
+        // Attach the per-user keyring
+        let ring: Keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+
+        // read() returns (Vec<Key>, Vec<Keyring>)
+        let (child_keys, _child_rings) = ring.read()?;
+
+        // Use iterator and collect all descriptions into a Vec<String>
+        let names: Result<Vec<String>> = child_keys
+            .into_iter()
+            .map(|key| Ok(key.description()?.description))
+            .collect();
+
+        names
     }
 
-    fn delete_token(&self, _name: &str) -> Result<()> {
-        Err(anyhow::anyhow!("Not supported on Linux"))
+    fn delete_token(&self, name: &str) -> Result<()> {
+        // Attach the per-user keyring
+        let keyring: Keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+
+        // Search for the key of type "user" with the given description
+        if let Ok(key) =
+            keyring.search_for_key::<keyutils::keytypes::User, &str, Option<&mut Keyring>>(name, None)
+        {
+            // Revoke/delete the key
+            key.revoke()?;
+        }
+
+        Ok(())
     }
 }
 
@@ -111,5 +158,40 @@ impl SRSStore for KeychainStore {
 
     fn delete_token(&self, _name: &str) -> Result<()> {
         Err(anyhow::anyhow!("Not supported on Windows"))
+    }
+}
+
+#[cfg(test)]
+pub struct InMemoryStore(pub Mutex<HashMap<String, String>>);
+
+#[cfg(test)]
+impl InMemoryStore {
+    pub fn new() -> Self {
+        InMemoryStore(Mutex::new(HashMap::new()))
+    }
+}
+
+#[cfg(test)]
+impl SRSStore for InMemoryStore {
+    fn add_token(&self, name: &str, token: &str) -> Result<()> {
+        let mut map = self.0.lock().unwrap();
+        map.insert(name.to_string(), token.to_string());
+        Ok(())
+    }
+
+    fn get_token(&self, name: &str) -> Result<String> {
+        let map = self.0.lock().unwrap();
+        Ok(map.get(name).cloned().expect("Token not present"))
+    }
+
+    fn list_tokens(&self) -> Result<Vec<String>> {
+        let map = self.0.lock().unwrap();
+        Ok(map.keys().cloned().collect())
+    }
+
+    fn delete_token(&self, name: &str) -> Result<()> {
+        let mut map = self.0.lock().unwrap();
+        map.remove(name);
+        Ok(())
     }
 }
