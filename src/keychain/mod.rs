@@ -1,9 +1,8 @@
 use crate::storage::SRSStore;
 use anyhow::Result;
-use libc;
-use serde;
-use serde_json;
 use std::ffi::{CStr, CString};
+use serde::Deserialize;
+use serde_json::from_str;
 
 #[cfg(target_os = "macos")]
 unsafe extern "C" {
@@ -21,8 +20,7 @@ impl KeychainStore {
     }
 }
 
-#[cfg(target_os = "macos")]
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 struct TokenResponse {
     tokens: Vec<String>,
 }
@@ -50,7 +48,6 @@ impl SRSStore for KeychainStore {
         let c_str = unsafe { CStr::from_ptr(token_ptr) };
         let token_str = c_str.to_string_lossy().into_owned();
 
-        // Free the memory allocated by Swift
         unsafe { libc::free(token_ptr as *mut libc::c_void) };
 
         Ok(Some(token_str))
@@ -66,7 +63,7 @@ impl SRSStore for KeychainStore {
         let c_str = unsafe { CStr::from_ptr(tokens_ptr) };
         let json_str = c_str.to_str().unwrap();
 
-        match serde_json::from_str::<TokenResponse>(&json_str) {
+        match from_str::<TokenResponse>(json_str) {
             Ok(response) => Ok(response.tokens),
             Err(e) => {
                 println!(

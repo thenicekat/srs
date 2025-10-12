@@ -44,7 +44,7 @@ impl TokenStorage {
     }
 
     pub fn list_tokens(&self) -> Result<Vec<String>> {
-        Ok(self.store.list_tokens()?)
+        self.store.list_tokens()
     }
 
     pub fn delete_token(&mut self, name: &str) -> Result<bool> {
