@@ -93,12 +93,12 @@ impl SRSStore for KeychainStore {
         Ok(())
     }
 
-    fn get_token(&self, name: &str) -> Result<Option<String>> {
+    fn get_token(&self, name: &str) -> Result<String> {
         let keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
         if let Ok(key) = keyring.search_for_key::<User, &str, Option<&mut Keyring>>(name, None) {
             let payload = key.read()?;
             let token = String::from_utf8_lossy(&payload).into_owned();
-            return Ok(Some(token));
+            return Ok(token);
         }
 
         Err(anyhow::anyhow!("{}", name))
