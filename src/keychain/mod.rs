@@ -16,6 +16,12 @@ unsafe extern "C" {
     fn delete_token(key: *const std::os::raw::c_char) -> i32;
 }
 
+
+#[cfg(test)]
+use std::sync::Mutex;
+#[cfg(test)]
+use std::collections::HashMap;
+
 #[cfg(target_os = "linux")]
 use keyutils::{keytypes::User, Keyring, SpecialKeyring};
 
@@ -152,5 +158,40 @@ impl SRSStore for KeychainStore {
 
     fn delete_token(&self, _name: &str) -> Result<()> {
         Err(anyhow::anyhow!("Not supported on Windows"))
+    }
+}
+
+#[cfg(test)]
+pub struct InMemoryStore(pub Mutex<HashMap<String, String>>);
+
+#[cfg(test)]
+impl InMemoryStore {
+    pub fn new() -> Self {
+        InMemoryStore(Mutex::new(HashMap::new()))
+    }
+}
+
+#[cfg(test)]
+impl SRSStore for InMemoryStore {
+    fn add_token(&self, name: &str, token: &str) -> Result<()> {
+        let mut map = self.0.lock().unwrap();
+        map.insert(name.to_string(), token.to_string());
+        Ok(())
+    }
+
+    fn get_token(&self, name: &str) -> Result<String> {
+        let map = self.0.lock().unwrap();
+        Ok(map.get(name).cloned().expect("Token not present"))
+    }
+
+    fn list_tokens(&self) -> Result<Vec<String>> {
+        let map = self.0.lock().unwrap();
+        Ok(map.keys().cloned().collect())
+    }
+
+    fn delete_token(&self, name: &str) -> Result<()> {
+        let mut map = self.0.lock().unwrap();
+        map.remove(name);
+        Ok(())
     }
 }

@@ -1,4 +1,5 @@
 use crate::crypto::CryptoManager;
+use crate::keychain::InMemoryStore;
 use crate::keychain::KeychainStore;
 use anyhow::Result;
 
@@ -35,7 +36,9 @@ impl TokenStorage {
             Ok(encrypted_token) => {
                 let decrypted_token = self.crypto_manager.decrypt(&encrypted_token);
                 if decrypted_token.is_err() {
-                    return Err(anyhow::anyhow!("Incorrect master key. Cannot decrypt token."));
+                    return Err(anyhow::anyhow!(
+                        "Incorrect master key. Cannot decrypt token."
+                    ));
                 }
                 Ok(decrypted_token.unwrap())
             }
@@ -88,8 +91,29 @@ mod tests {
         let key = [0u8; 32];
         let crypto_manager = CryptoManager::from_key(key);
 
+        // Choose the store implementation based on platform / CI
+        #[cfg(test)]
+        let store: Box<dyn SRSStore> = {
+            if std::env::var("CI").is_ok() {
+                // Use in-memory store in CI
+                Box::new(InMemoryStore::new())
+            } else {
+                // Use real Linux keyring locally
+                Box::new(KeychainStore::new()?)
+            }
+        };
+
+        #[cfg(all(not(test), target_os = "linux"))]
+        let store: Box<dyn SRSStore> = Box::new(KeychainStore::new()?);
+
+        #[cfg(all(not(test), target_os = "macos"))]
+        let store: Box<dyn SRSStore> = Box::new(KeychainStore::new()?);
+
+        #[cfg(all(not(test), target_os = "windows"))]
+        let store: Box<dyn SRSStore> = Box::new(KeychainStore::new()?);
+
         let storage = TokenStorage {
-            store: Box::new(KeychainStore::new()?),
+            store,
             crypto_manager,
         };
 
@@ -108,8 +132,8 @@ mod tests {
     #[test]
     fn get_nonexistent_token() {
         let storage = setup_storage().unwrap();
-        let token = storage.get_token("nonexistent").unwrap();
-        assert!(token.is_empty());
+        let token = storage.get_token("nonexistent");
+        assert!(token.is_err());
     }
 
     #[test]
@@ -119,8 +143,8 @@ mod tests {
         let deleted = storage.delete_token("foo").unwrap();
         assert!(deleted);
 
-        let token = storage.get_token("foo").unwrap();
-        assert!(token.is_empty());
+        let token = storage.get_token("foo");
+        assert!(token.is_err());
     }
 
     #[test]
@@ -140,7 +164,6 @@ mod tests {
         assert!(tokens.contains(&"foo".to_string()));
         assert!(tokens.contains(&"baz".to_string()));
     }
-
 
     #[test]
     fn save_and_load() -> Result<()> {
