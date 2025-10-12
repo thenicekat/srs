@@ -1,7 +1,6 @@
 use crate::storage::SRSStore;
 use anyhow::Result;
 use std::ffi::{CStr, CString};
-use serde::Deserialize;
 use serde_json::from_str;
 
 #[cfg(target_os = "macos")]
@@ -18,11 +17,6 @@ impl KeychainStore {
     pub fn new() -> Result<Self> {
         Ok(KeychainStore)
     }
-}
-
-#[derive(Deserialize)]
-struct TokenResponse {
-    tokens: Vec<String>,
 }
 
 #[cfg(target_os = "macos")]
@@ -63,8 +57,8 @@ impl SRSStore for KeychainStore {
         let c_str = unsafe { CStr::from_ptr(tokens_ptr) };
         let json_str = c_str.to_str().unwrap();
 
-        match from_str::<TokenResponse>(json_str) {
-            Ok(response) => Ok(response.tokens),
+        match from_str(json_str) {
+            Ok(response) => Ok(response),
             Err(e) => {
                 println!(
                     "Error parsing JSON response: {} from string {}",
