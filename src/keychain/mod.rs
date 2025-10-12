@@ -31,12 +31,12 @@ impl SRSStore for KeychainStore {
         Ok(())
     }
 
-    fn get_token(&self, name: &str) -> Result<Option<String>> {
+    fn get_token(&self, name: &str) -> Result<String> {
         let c_name = CString::new(name)?;
         let token_ptr = unsafe { get_token(c_name.as_ptr()) };
 
         if token_ptr.is_null() {
-            return Ok(None);
+            return Err(anyhow::anyhow!("Token not found"));
         }
 
         let c_str = unsafe { CStr::from_ptr(token_ptr) };
@@ -44,7 +44,7 @@ impl SRSStore for KeychainStore {
 
         unsafe { libc::free(token_ptr as *mut libc::c_void) };
 
-        Ok(Some(token_str))
+        Ok(token_str)
     }
 
     fn list_tokens(&self) -> Result<Vec<String>> {

@@ -4,7 +4,7 @@ use anyhow::Result;
 
 pub trait SRSStore {
     fn add_token(&self, name: &str, token: &str) -> Result<()>;
-    fn get_token(&self, name: &str) -> Result<Option<String>>;
+    fn get_token(&self, name: &str) -> Result<String>;
     fn list_tokens(&self) -> Result<Vec<String>>;
     fn delete_token(&self, name: &str) -> Result<()>;
 }
@@ -31,15 +31,15 @@ impl TokenStorage {
     }
 
     pub fn get_token(&self, name: &str) -> Result<String> {
-        match self.store.get_token(name)? {
-            Some(encrypted_token) => {
+        match self.store.get_token(name) {
+            Ok(encrypted_token) => {
                 let decrypted_token = self.crypto_manager.decrypt(&encrypted_token);
                 if decrypted_token.is_err() {
                     return Err(anyhow::anyhow!("Incorrect master key. Cannot decrypt token."));
                 }
                 Ok(decrypted_token.unwrap())
             }
-            None => Err(anyhow::anyhow!("Token not found")),
+            Err(e) => Err(anyhow::anyhow!("Token not found: {}", e)),
         }
     }
 
@@ -66,7 +66,7 @@ impl TokenStorage {
 
         for name in self.store.list_tokens()? {
             if let Ok(decrypted_token) = self.store.get_token(&name) {
-                child_env.insert(name.clone(), decrypted_token.unwrap());
+                child_env.insert(name.clone(), decrypted_token);
             }
         }
 
