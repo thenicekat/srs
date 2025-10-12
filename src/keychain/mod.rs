@@ -8,10 +8,11 @@ use serde;
 #[cfg(target_os = "macos")]
 use serde_json;
 #[cfg(target_os = "macos")]
+use serde_json::from_str;
+#[cfg(target_os = "macos")]
 use std::ffi::{CStr, CString};
 
 use serde::Deserialize;
-use serde_json::from_str;
 
 #[cfg(target_os = "macos")]
 unsafe extern "C" {
@@ -22,7 +23,7 @@ unsafe extern "C" {
 }
 
 #[cfg(target_os = "linux")]
-use keyutils::{keytypes::User, Keyring, Permission, SpecialKeyring};
+use keyutils::{keytypes::User, Keyring, SpecialKeyring};
 
 pub struct KeychainStore;
 
@@ -131,7 +132,18 @@ impl SRSStore for KeychainStore {
     }
 
     fn delete_token(&self, name: &str) -> Result<()> {
-        todo!()
+        // Attach the per-user keyring
+        let keyring: Keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+
+        // Search for the key of type "user" with the given description
+        if let Ok(key) =
+            keyring.search_for_key::<keyutils::keytypes::User, &str, Option<&mut Keyring>>(name, None)
+        {
+            // Revoke/delete the key
+            key.revoke()?;
+        }
+
+        Ok(())
     }
 }
 
