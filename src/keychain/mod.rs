@@ -11,7 +11,7 @@ use serde_json;
 use serde_json::from_str;
 #[cfg(target_os = "macos")]
 use std::ffi::{CStr, CString};
-
+#[cfg(target_os = "macos")]
 use serde::Deserialize;
 
 #[cfg(target_os = "macos")]
@@ -33,6 +33,7 @@ impl KeychainStore {
     }
 }
 
+#[cfg(target_os = "macos")]
 #[derive(Deserialize)]
 struct TokenResponse {
     tokens: Vec<String>,
@@ -112,7 +113,7 @@ impl SRSStore for KeychainStore {
             return Ok(Some(token));
         }
 
-        Err(anyhow::anyhow!("Key for name: {} not found", name))
+        Err(anyhow::anyhow!("{}", name))
     }
 
     fn list_tokens(&self) -> Result<Vec<String>> {
