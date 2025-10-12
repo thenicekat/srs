@@ -175,9 +175,6 @@ mod tests {
         storage.store_token(&name1, &token1)?;
         storage.store_token(&name2, &token2)?;
 
-        dbg!(storage.get_token(&name1)?);
-        dbg!(token1);
-
         let tokens = storage.list_tokens()?;
         assert!(tokens.contains(&name1));
         assert!(tokens.contains(&name2));

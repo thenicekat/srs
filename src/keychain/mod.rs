@@ -94,13 +94,15 @@ impl SRSStore for KeychainStore {
 impl SRSStore for KeychainStore {
     fn add_token(&self, name: &str, token: &str) -> Result<()> {
         let mut keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        keyring = keyring.attach_persistent()?;
         keyring.add_key::<User, &str, &[u8]>(name, token.as_bytes())?;
 
         Ok(())
     }
 
     fn get_token(&self, name: &str) -> Result<String> {
-        let keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        let mut keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        keyring = keyring.attach_persistent()?;
         if let Ok(key) = keyring.search_for_key::<User, &str, Option<&mut Keyring>>(name, None) {
             let payload = key.read()?;
             let token = String::from_utf8_lossy(&payload).into_owned();
@@ -111,8 +113,8 @@ impl SRSStore for KeychainStore {
     }
 
     fn list_tokens(&self) -> Result<Vec<String>> {
-        // Attach the per-user keyring
-        let keyring: Keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        let mut keyring: Keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        keyring = keyring.attach_persistent()?;
         let (child_keys, _) = keyring.read().unwrap_or_else(|_| (Vec::new(), Vec::new()));
 
         // Use iterator and collect all descriptions into a Vec<String>
@@ -126,7 +128,8 @@ impl SRSStore for KeychainStore {
 
     fn delete_token(&self, name: &str) -> Result<()> {
         // Attach the per-user keyring
-        let keyring: Keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        let mut keyring: Keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
+        keyring = keyring.attach_persistent()?;
 
         // Search for the key of type "user" with the given description
         if let Ok(key) =
