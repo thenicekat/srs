@@ -13,6 +13,9 @@ jobs:
         with:
           components: clippy,rustfmt
 
+      - name: Start user keyring
+        run: eval $(keyctl new_session)
+
       - name: Lint
         run: cargo fix
 
