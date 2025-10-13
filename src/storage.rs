@@ -67,8 +67,8 @@ impl TokenStorage {
         for name in self.store.list_tokens()? {
             if let Ok(encrypted_token) = self.store.get_token(&name) {
                 let decrypted_token = self.crypto_manager.decrypt(&encrypted_token);
-                if let Ok(decrypted_token) = decrypted_token {
-                    child_env.insert(name.clone(), decrypted_token);
+                if let Ok(final_decrypted_token) = decrypted_token {
+                    child_env.insert(name.clone(), final_decrypted_token);
                 }
             }
         }
