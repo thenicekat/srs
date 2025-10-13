@@ -135,7 +135,7 @@ impl SRSStore for KeychainStore {
         Err(anyhow::anyhow!("Not supported on Windows"))
     }
 
-    fn get_token(&self, _name: &str) -> Result<Option<String>> {
+    fn get_token(&self, _name: &str) -> Result<String> {
         Err(anyhow::anyhow!("Not supported on Windows"))
     }
 
