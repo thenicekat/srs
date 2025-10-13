@@ -118,8 +118,8 @@ impl SRSStore for KeychainStore {
         let keyring: Keyring = Keyring::attach_or_create(SpecialKeyring::User)?;
 
         // Search for the key of type "user" with the given description
-        if let Ok(key) =
-            keyring.search_for_key::<keyutils::keytypes::User, &str, Option<&mut Keyring>>(name, None)
+        if let Ok(key) = keyring
+            .search_for_key::<keyutils::keytypes::User, &str, Option<&mut Keyring>>(name, None)
         {
             // Revoke/delete the key
             key.revoke()?;
@@ -147,4 +147,3 @@ impl SRSStore for KeychainStore {
         Err(anyhow::anyhow!("Not supported on Windows"))
     }
 }
-
