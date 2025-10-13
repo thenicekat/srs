@@ -33,13 +33,8 @@ impl TokenStorage {
     pub fn get_token(&self, name: &str) -> Result<String> {
         match self.store.get_token(name) {
             Ok(encrypted_token) => {
-                let decrypted_token = self.crypto_manager.decrypt(&encrypted_token);
-                if decrypted_token.is_err() {
-                    return Err(anyhow::anyhow!(
-                        "Incorrect master key. Cannot decrypt token."
-                    ));
-                }
-                Ok(decrypted_token.unwrap())
+                let decrypted_token = self.crypto_manager.decrypt(&encrypted_token).map_err(|_| anyhow::anyhow!("Incorrect master key. Cannot decrypt token."))?;
+                Ok(decrypted_token)
             }
             Err(e) => Err(anyhow::anyhow!("Token not found: {}", e)),
         }
