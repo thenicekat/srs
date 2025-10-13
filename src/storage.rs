@@ -67,8 +67,11 @@ impl TokenStorage {
         let mut child_env = std::env::vars().collect::<std::collections::HashMap<String, String>>();
 
         for name in self.store.list_tokens()? {
-            if let Ok(decrypted_token) = self.store.get_token(&name) {
-                child_env.insert(name.clone(), decrypted_token);
+            if let Ok(encrypted_token) = self.store.get_token(&name) {
+                let decrypted_token = self.crypto_manager.decrypt(&encrypted_token);
+                if decrypted_token.is_ok() {
+                    child_env.insert(name.clone(), decrypted_token.unwrap());
+                }
             }
         }
 
