@@ -60,7 +60,9 @@ impl TokenStorage {
 
     pub fn store_token(&mut self, name: &str, token: &str) -> Result<()> {
         let encrypted_token = self.crypto_manager.encrypt(token)?;
-        self.database.tokens.insert(name.to_string(), encrypted_token);
+        self.database
+            .tokens
+            .insert(name.to_string(), encrypted_token);
         self.save()?;
         Ok(())
     }
@@ -77,7 +79,11 @@ impl TokenStorage {
     }
 
     fn resolve_alias<'a>(&'a self, name: &'a str) -> &'a str {
-        self.database.aliases.get(name).map(|s| s.as_str()).unwrap_or(name)
+        self.database
+            .aliases
+            .get(name)
+            .map(|s| s.as_str())
+            .unwrap_or(name)
     }
 
     pub fn list_tokens(&self) -> Result<Vec<String>> {
@@ -149,14 +155,19 @@ impl TokenStorage {
         }
 
         if self.database.tokens.contains_key(alias) {
-            return Err(anyhow::anyhow!("'{}' already exists as a token name", alias));
+            return Err(anyhow::anyhow!(
+                "'{}' already exists as a token name",
+                alias
+            ));
         }
 
         if self.database.aliases.contains_key(alias) {
             return Err(anyhow::anyhow!("Alias '{}' already exists", alias));
         }
 
-        self.database.aliases.insert(alias.to_string(), target.to_string());
+        self.database
+            .aliases
+            .insert(alias.to_string(), target.to_string());
         self.save()?;
         Ok(())
     }
@@ -175,7 +186,10 @@ impl TokenStorage {
         if !self.database.tokens.is_empty() {
             let _ = self.verify_master_key()?;
         }
-        Ok(self.database.aliases.iter()
+        Ok(self
+            .database
+            .aliases
+            .iter()
             .map(|(alias, target)| (alias.clone(), target.clone()))
             .collect())
     }
@@ -362,7 +376,7 @@ mod tests {
         let mut storage = setup_storage();
         storage.store_token("TOKEN", "value").unwrap();
         storage.add_alias("ALIAS1", "TOKEN").unwrap();
-        
+
         let result = storage.add_alias("ALIAS2", "ALIAS1");
         assert!(result.is_err());
     }
@@ -373,7 +387,7 @@ mod tests {
         storage.store_token("TOKEN1", "value1").unwrap();
         storage.store_token("TOKEN2", "value2").unwrap();
         storage.add_alias("MY_ALIAS", "TOKEN1").unwrap();
-        
+
         let result = storage.add_alias("MY_ALIAS", "TOKEN2");
         assert!(result.is_err());
     }
@@ -381,15 +395,29 @@ mod tests {
     #[test]
     fn multiple_aliases_for_same_token() {
         let mut storage = setup_storage();
-        storage.store_token("GITHUB_TOKEN", "ghp_secret123").unwrap();
+        storage
+            .store_token("GITHUB_TOKEN", "ghp_secret123")
+            .unwrap();
         storage.add_alias("GH_TOKEN", "GITHUB_TOKEN").unwrap();
         storage.add_alias("GITHUB_PAT", "GITHUB_TOKEN").unwrap();
         storage.add_alias("GH_PAT", "GITHUB_TOKEN").unwrap();
 
-        assert_eq!(storage.get_token("GITHUB_TOKEN").unwrap().unwrap(), "ghp_secret123");
-        assert_eq!(storage.get_token("GH_TOKEN").unwrap().unwrap(), "ghp_secret123");
-        assert_eq!(storage.get_token("GITHUB_PAT").unwrap().unwrap(), "ghp_secret123");
-        assert_eq!(storage.get_token("GH_PAT").unwrap().unwrap(), "ghp_secret123");
+        assert_eq!(
+            storage.get_token("GITHUB_TOKEN").unwrap().unwrap(),
+            "ghp_secret123"
+        );
+        assert_eq!(
+            storage.get_token("GH_TOKEN").unwrap().unwrap(),
+            "ghp_secret123"
+        );
+        assert_eq!(
+            storage.get_token("GITHUB_PAT").unwrap().unwrap(),
+            "ghp_secret123"
+        );
+        assert_eq!(
+            storage.get_token("GH_PAT").unwrap().unwrap(),
+            "ghp_secret123"
+        );
 
         let aliases = storage.list_aliases().unwrap();
         assert_eq!(aliases.len(), 3);
@@ -399,7 +427,7 @@ mod tests {
     fn remove_nonexistent_alias() {
         let mut storage = setup_storage();
         storage.store_token("TOKEN", "value").unwrap();
-        
+
         let removed = storage.remove_alias("NONEXISTENT").unwrap();
         assert!(!removed);
     }
@@ -438,10 +466,10 @@ mod tests {
     fn delete_token_with_no_aliases() {
         let mut storage = setup_storage();
         storage.store_token("SOLO_TOKEN", "value").unwrap();
-        
+
         let deleted = storage.delete_token("SOLO_TOKEN").unwrap();
         assert!(deleted);
-        
+
         assert!(storage.get_token("SOLO_TOKEN").unwrap().is_none());
         assert_eq!(storage.list_aliases().unwrap().len(), 0);
     }
@@ -450,7 +478,7 @@ mod tests {
     fn save_and_load_preserves_aliases() {
         let mut storage = setup_storage();
         let temp_path = storage.file_path.clone();
-        
+
         storage.store_token("TOKEN", "secret").unwrap();
         storage.add_alias("ALIAS1", "TOKEN").unwrap();
         storage.add_alias("ALIAS2", "TOKEN").unwrap();
@@ -470,7 +498,7 @@ mod tests {
         assert_eq!(storage2.get_token("TOKEN").unwrap().unwrap(), "secret");
         assert_eq!(storage2.get_token("ALIAS1").unwrap().unwrap(), "secret");
         assert_eq!(storage2.get_token("ALIAS2").unwrap().unwrap(), "secret");
-        
+
         let aliases = storage2.list_aliases().unwrap();
         assert_eq!(aliases.len(), 2);
     }
@@ -478,10 +506,10 @@ mod tests {
     #[test]
     fn empty_storage_list_operations() {
         let storage = setup_storage();
-        
+
         let result = storage.list_tokens();
         assert!(result.is_err());
-        
+
         let result = storage.list_aliases();
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 0);
@@ -512,24 +540,36 @@ mod tests {
     fn long_token_values() {
         let mut storage = setup_storage();
         let long_value = "a".repeat(10000);
-        
+
         storage.store_token("LONG_TOKEN", &long_value).unwrap();
         storage.add_alias("LONG_ALIAS", "LONG_TOKEN").unwrap();
 
-        assert_eq!(storage.get_token("LONG_TOKEN").unwrap().unwrap(), long_value);
-        assert_eq!(storage.get_token("LONG_ALIAS").unwrap().unwrap(), long_value);
+        assert_eq!(
+            storage.get_token("LONG_TOKEN").unwrap().unwrap(),
+            long_value
+        );
+        assert_eq!(
+            storage.get_token("LONG_ALIAS").unwrap().unwrap(),
+            long_value
+        );
     }
 
     #[test]
     fn unicode_in_values() {
         let mut storage = setup_storage();
         let unicode_value = "Hello 世界 🌍 مرحبا";
-        
+
         storage.store_token("UNICODE_TOKEN", unicode_value).unwrap();
         storage.add_alias("UNICODE_ALIAS", "UNICODE_TOKEN").unwrap();
 
-        assert_eq!(storage.get_token("UNICODE_TOKEN").unwrap().unwrap(), unicode_value);
-        assert_eq!(storage.get_token("UNICODE_ALIAS").unwrap().unwrap(), unicode_value);
+        assert_eq!(
+            storage.get_token("UNICODE_TOKEN").unwrap().unwrap(),
+            unicode_value
+        );
+        assert_eq!(
+            storage.get_token("UNICODE_ALIAS").unwrap().unwrap(),
+            unicode_value
+        );
     }
 
     #[test]
@@ -544,7 +584,7 @@ mod tests {
 
         storage.store_token("TOKEN", "value2").unwrap();
         assert_eq!(storage.get_token("TOKEN").unwrap().unwrap(), "value2");
-        
+
         assert!(storage.get_token("ALIAS").unwrap().is_none());
     }
 
@@ -553,7 +593,7 @@ mod tests {
         let mut storage = setup_storage();
         storage.store_token("TOKEN", "value").unwrap();
         storage.add_alias("ALIAS1", "TOKEN").unwrap();
-        
+
         let result = storage.add_alias("ALIAS2", "ALIAS1");
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("does not exist"));
