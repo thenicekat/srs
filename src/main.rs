@@ -43,27 +43,26 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Add { name, token } => {
-            let token_value = match token {
-                Some(t) => t,
-                None => {
-                    print!("Enter token for '{}': ", name);
-                    io::stdout().flush()?;
-                    read_password().expect("Failed to read password")
-                }
+            let token_value = if let Some(t) = token {
+                t
+            } else {
+                print!("Enter token for '{name}': ");
+                io::stdout().flush()?;
+                read_password().expect("Failed to read password")
             };
 
             storage.store_token(&name, &token_value)?;
-            println!("::> Token '{}' stored successfully!", name);
+            println!("::> Token '{name}' stored successfully!");
         }
         Commands::Get { name } => match storage.get_token(&name)? {
-            Some(token) => println!("{}", token),
-            None => println!("::> Token '{}' not found", name),
+            Some(token) => println!("{token}"),
+            None => println!("::> Token '{name}' not found"),
         },
         Commands::List => {
             let tokens = storage.list_tokens()?;
             println!("Stored tokens:");
             for name in tokens {
-                println!("  - {}", name);
+                println!("  - {name}");
             }
         }
         Commands::Delete { name } => {
@@ -75,14 +74,14 @@ fn main() -> Result<()> {
         }
         Commands::AddAlias { alias, target } => {
             storage.add_alias(&alias, &target)?;
-            println!("::> Alias '{}' -> '{}' added successfully!", alias, target);
+            println!("::> Alias '{alias}' -> '{target}' added successfully!");
         }
         Commands::RemoveAlias { alias } => {
             let removed = storage.remove_alias(&alias)?;
             if removed {
-                println!("::> Alias '{}' removed successfully!", alias);
+                println!("::> Alias '{alias}' removed successfully!");
             } else {
-                println!("::> Alias '{}' not found", alias);
+                println!("::> Alias '{alias}' not found");
             }
         }
         Commands::ListAliases => {
@@ -92,7 +91,7 @@ fn main() -> Result<()> {
             } else {
                 println!("Configured aliases:");
                 for (alias, target) in aliases {
-                    println!("  {} -> {}", alias, target);
+                    println!("  {alias} -> {target}");
                 }
             }
         }

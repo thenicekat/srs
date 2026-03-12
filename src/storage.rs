@@ -82,8 +82,7 @@ impl TokenStorage {
         self.database
             .aliases
             .get(name)
-            .map(|s| s.as_str())
-            .unwrap_or(name)
+            .map_or(name, std::string::String::as_str)
     }
 
     pub fn list_tokens(&self) -> Result<Vec<String>> {
@@ -114,9 +113,9 @@ impl TokenStorage {
         if removed {
             self.database.aliases.retain(|_, target| target != name);
             self.save()?;
-            println!("::> Token '{}' deleted successfully!", name);
+            println!("::> Token '{name}' deleted successfully!");
         } else {
-            println!("::> Token '{}' not found", name);
+            println!("::> Token '{name}' not found");
         }
         Ok(removed)
     }
@@ -151,18 +150,15 @@ impl TokenStorage {
         let _ = self.verify_master_key()?;
 
         if !self.database.tokens.contains_key(target) {
-            return Err(anyhow::anyhow!("Target token '{}' does not exist", target));
+            return Err(anyhow::anyhow!("Target token '{target}' does not exist"));
         }
 
         if self.database.tokens.contains_key(alias) {
-            return Err(anyhow::anyhow!(
-                "'{}' already exists as a token name",
-                alias
-            ));
+            return Err(anyhow::anyhow!("'{alias}' already exists as a token name"));
         }
 
         if self.database.aliases.contains_key(alias) {
-            return Err(anyhow::anyhow!("Alias '{}' already exists", alias));
+            return Err(anyhow::anyhow!("Alias '{alias}' already exists"));
         }
 
         self.database
