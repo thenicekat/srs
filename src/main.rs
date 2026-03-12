@@ -28,6 +28,12 @@ enum Commands {
     Delete { name: String },
     #[command(about = "Spawns a new shell with all tokens loaded via memory pipe.")]
     Shell,
+    #[command(about = "Adds an alias that points to an existing token.")]
+    AddAlias { alias: String, target: String },
+    #[command(about = "Removes an alias.")]
+    RemoveAlias { alias: String },
+    #[command(about = "Lists all aliases and their targets.")]
+    ListAliases,
 }
 
 fn main() -> Result<()> {
@@ -66,6 +72,29 @@ fn main() -> Result<()> {
         Commands::Shell => {
             println!("::> Spawning new shell with SRS tokens loaded...");
             storage.populate_tokens_to_child()?;
+        }
+        Commands::AddAlias { alias, target } => {
+            storage.add_alias(&alias, &target)?;
+            println!("::> Alias '{}' -> '{}' added successfully!", alias, target);
+        }
+        Commands::RemoveAlias { alias } => {
+            let removed = storage.remove_alias(&alias)?;
+            if removed {
+                println!("::> Alias '{}' removed successfully!", alias);
+            } else {
+                println!("::> Alias '{}' not found", alias);
+            }
+        }
+        Commands::ListAliases => {
+            let aliases = storage.list_aliases()?;
+            if aliases.is_empty() {
+                println!("No aliases configured.");
+            } else {
+                println!("Configured aliases:");
+                for (alias, target) in aliases {
+                    println!("  {} -> {}", alias, target);
+                }
+            }
         }
     }
     Ok(())

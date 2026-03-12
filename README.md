@@ -7,6 +7,7 @@ A secure command-line tool for storing and managing personal access tokens using
 - **AES-256-GCM Encryption**: Military-grade encryption for your sensitive data.
 - **Master Key Protection**: Your master key is never stored, only used to derive encryption keys.
 - **Environment Integration**: Populate environment variables with stored tokens
+- **Alias Support**: Create multiple environment variable names that share the same value
 - **Cross-Platform**: Works on macOS and Linux. (Windows compatibility under development)
 - **Zero Dependencies**: No external services or cloud dependencies. All your data stays on your computer.
 
@@ -41,13 +42,50 @@ cargo install --git https://github.com/thenicekat/srs
 
 ### Command Reference
 
-| Command                | Description                                | Example                                                    |
-| ---------------------- | ------------------------------------------ | ---------------------------------------------------------- |
-| `add <name> [<value>]` | Store a new token                          | `srs add github_token token_value`, `srs add github_token` |
-| `get <name>`           | Retrieve a token                           | `srs get github_token`                                     |
-| `list`                 | List all token names                       | `srs list`                                                 |
-| `delete <name>`        | Delete a token                             | `srs delete github_token`                                  |
-| `shell`                | Creates a new shell with the env populated | `srs shell`                                                |
+| Command                      | Description                                | Example                                                    |
+| ---------------------------- | ------------------------------------------ | ---------------------------------------------------------- |
+| `add <name> [<value>]`       | Store a new token                          | `srs add github_token token_value`, `srs add github_token` |
+| `get <name>`                 | Retrieve a token                           | `srs get github_token`                                     |
+| `list`                       | List all token names                       | `srs list`                                                 |
+| `delete <name>`              | Delete a token                             | `srs delete github_token`                                  |
+| `shell`                      | Creates a new shell with the env populated | `srs shell`                                                |
+| `add-alias <alias> <target>` | Create an alias for an existing token      | `srs add-alias GH_TOKEN github_token`                      |
+| `remove-alias <alias>`       | Remove an alias                            | `srs remove-alias GH_TOKEN`                                |
+| `list-aliases`               | List all aliases and their targets         | `srs list-aliases`                                         |
+
+### Working with Aliases
+
+Aliases allow you to have multiple environment variable names that point to the same encrypted value. This is useful when different tools or scripts expect different environment variable names for the same credential.
+
+```bash
+# Store a token
+srs add github_token ghp_your_token_here
+
+# Create aliases for the same token
+srs add-alias GH_TOKEN github_token
+srs add-alias GITHUB_PAT github_token
+
+# Now all three names will work
+srs get github_token  # Returns the token
+srs get GH_TOKEN      # Returns the same token
+srs get GITHUB_PAT    # Returns the same token
+
+# When you spawn a shell, all names are available
+srs shell
+# Now $github_token, $GH_TOKEN, and $GITHUB_PAT all have the same value
+
+# List all aliases
+srs list-aliases
+# Output:
+#   GH_TOKEN -> github_token
+#   GITHUB_PAT -> github_token
+
+# Remove an alias (doesn't affect the original token)
+srs remove-alias GH_TOKEN
+
+# Delete the token (automatically removes all aliases)
+srs delete github_token
+```
 
 ## 🔒 Security Features
 
