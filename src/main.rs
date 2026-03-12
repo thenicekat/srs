@@ -28,6 +28,12 @@ enum Commands {
     Delete { name: String },
     #[command(about = "Spawns a new shell with all tokens loaded via memory pipe.")]
     Shell,
+    #[command(about = "Adds an alias that points to an existing token.")]
+    AddAlias { alias: String, target: String },
+    #[command(about = "Removes an alias.")]
+    RemoveAlias { alias: String },
+    #[command(about = "Lists all aliases and their targets.")]
+    ListAliases,
 }
 
 fn main() -> Result<()> {
@@ -37,27 +43,26 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Add { name, token } => {
-            let token_value = match token {
-                Some(t) => t,
-                None => {
-                    print!("Enter token for '{}': ", name);
-                    io::stdout().flush()?;
-                    read_password().expect("Failed to read password")
-                }
+            let token_value = if let Some(t) = token {
+                t
+            } else {
+                print!("Enter token for '{name}': ");
+                io::stdout().flush()?;
+                read_password().expect("Failed to read password")
             };
 
             storage.store_token(&name, &token_value)?;
-            println!("::> Token '{}' stored successfully!", name);
+            println!("::> Token '{name}' stored successfully!");
         }
         Commands::Get { name } => match storage.get_token(&name)? {
-            Some(token) => println!("{}", token),
-            None => println!("::> Token '{}' not found", name),
+            Some(token) => println!("{token}"),
+            None => println!("::> Token '{name}' not found"),
         },
         Commands::List => {
             let tokens = storage.list_tokens()?;
             println!("Stored tokens:");
             for name in tokens {
-                println!("  - {}", name);
+                println!("  - {name}");
             }
         }
         Commands::Delete { name } => {
@@ -66,6 +71,29 @@ fn main() -> Result<()> {
         Commands::Shell => {
             println!("::> Spawning new shell with SRS tokens loaded...");
             storage.populate_tokens_to_child()?;
+        }
+        Commands::AddAlias { alias, target } => {
+            storage.add_alias(&alias, &target)?;
+            println!("::> Alias '{alias}' -> '{target}' added successfully!");
+        }
+        Commands::RemoveAlias { alias } => {
+            let removed = storage.remove_alias(&alias)?;
+            if removed {
+                println!("::> Alias '{alias}' removed successfully!");
+            } else {
+                println!("::> Alias '{alias}' not found");
+            }
+        }
+        Commands::ListAliases => {
+            let aliases = storage.list_aliases()?;
+            if aliases.is_empty() {
+                println!("No aliases configured.");
+            } else {
+                println!("Configured aliases:");
+                for (alias, target) in aliases {
+                    println!("  {alias} -> {target}");
+                }
+            }
         }
     }
     Ok(())

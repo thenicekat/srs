@@ -33,7 +33,7 @@ impl CryptoManager {
 
         let ciphertext = cipher
             .encrypt(nonce, plaintext.as_bytes())
-            .map_err(|e| anyhow!("Encryption failed: {}", e))?;
+            .map_err(|e| anyhow!("Encryption failed: {e}"))?;
 
         let mut encrypted_data = nonce_bytes.to_vec();
         encrypted_data.extend_from_slice(&ciphertext);
@@ -44,7 +44,7 @@ impl CryptoManager {
     pub fn decrypt(&self, encrypted_data: &str) -> Result<String> {
         let encrypted_bytes = general_purpose::STANDARD
             .decode(encrypted_data)
-            .map_err(|e| anyhow!("Store possibly corrupt, please recreate your store: {}", e))?;
+            .map_err(|e| anyhow!("Store possibly corrupt, please recreate your store: {e}"))?;
 
         if encrypted_bytes.len() < 12 {
             return Err(anyhow!("Invalid encrypted data found."));
@@ -58,10 +58,10 @@ impl CryptoManager {
 
         let plaintext = cipher
             .decrypt(nonce, ciphertext)
-            .map_err(|e| anyhow!("Error occurred during decryption: {}", e))?;
+            .map_err(|e| anyhow!("Error occurred during decryption: {e}"))?;
 
         String::from_utf8(plaintext)
-            .map_err(|e| anyhow!("Error occurred during reconstruction: {}", e))
+            .map_err(|e| anyhow!("Error occurred during reconstruction: {e}"))
     }
 }
 
